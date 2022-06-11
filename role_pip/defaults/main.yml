@@ -1,0 +1,13 @@
+---
+# defaults file for role_pip
+default_pip_packages:
+  - bpytop
+  - yq
+  - tqdm
+  - requests
+  - ipython
+  - jmespath
+  - black
+  - rich
+
+additional_pip_packages: []

@@ -1,0 +1,1 @@
+ansible-playbook -i hosts main-playbook.yml -e "is_get_gpu_info=True" --vault-password-file ./secret_key

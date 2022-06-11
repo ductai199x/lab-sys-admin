@@ -1,0 +1,15 @@
+user_choice: "admin"
+ansible_user: "{{ _admin_username if user_choice == 'admin' else _ansible_username }}"
+ansible_become_password: "{{ _admin_password if user_choice == 'admin' else _ansible_password }}"
+is_reboot: False
+is_update_upgrade: False
+is_install_pip_packages: False
+is_get_gpu_info: False
+current_users:
+    - tai
+    - brian
+    - owen
+    - shengbang
+    - xinwei
+    - danial
+    - misl-admin

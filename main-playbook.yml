@@ -1,0 +1,47 @@
+---
+# main playbook
+- name: Main playbook for managing all servers
+  hosts: lab03
+  vars_files:
+      - vars/main.yml
+      - vars/secrets.yml
+
+  tasks:
+      - set_fact:
+            unreachable_hosts: "{{ ansible_play_hosts_all|difference(ansible_play_hosts) }}"
+            cacheable: "yes"
+
+      - name: Include the role_apt
+        include_role:
+            name: role_apt
+
+        when: is_update_upgrade | bool == True
+
+      - name: Grab current PATH environment variable
+        shell:
+            cmd: echo $PATH
+        args:
+            executable: /bin/zsh
+        register: env_path
+        changed_when: False
+
+      - name: Set fact for env_path
+        set_fact:
+            env_path: "/home/tai/.local/bin:{{ env_path.stdout }}"
+            cacheable: "yes"
+
+      - name: Include the role_reboot
+        include_role:
+            name: role_reboot
+        when: is_reboot | bool == True
+
+      - name: Include the role_pip
+        include_role:
+            name: role_pip
+        when: is_install_pip_packages | bool == True
+
+      - name: Include the role_gpu
+        include_role:
+            name: role_gpu
+        when: is_get_gpu_info | bool == True
+ 

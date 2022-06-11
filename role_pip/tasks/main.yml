@@ -1,0 +1,76 @@
+---
+# tasks file for role_pip
+- name: Get the path to current pip's executable
+  shell:
+      cmd: which pip3
+  environment:
+      PATH: "{{ env_path }}"
+  args:
+      executable: /bin/zsh
+  register: pip_executable
+  changed_when: False
+  ignore_errors: True
+
+- name: Set fact for current pip_executable
+  set_fact:
+      pip_executable: "{{ pip_executable.stdout if pip_executable is success else 'pip3' }}"
+
+- name: Check pip version
+  shell:
+      cmd: "{{ pip_executable }} --version"
+  register: pip_version
+  changed_when: False
+  ignore_errors: True
+
+- name: Set fact for current pip_version
+  set_fact:
+      pip_version: "{{ pip_version.stdout | regex_search('python3.[0-9]+') }}"
+
+- name: Set fact for if pip_need_install
+  set_fact:
+      pip_need_install: "{{ False if pip_version == 'python3.9' else True }}"
+
+- name: Install pip locally if pip is not installed locally
+  block:
+      - name: Download and install pip locally
+        shell:
+            cmd: wget -O /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && python3.9 /tmp/get-pip.py
+
+      - name: Get the path to new pip's executable
+        shell:
+            cmd: which pip3
+        environment:
+            PATH: "{{ env_path }}"
+        args:
+            executable: /bin/zsh
+        register: new_pip_executable
+        changed_when: False
+
+      - name: Set fact for new pip_executable
+        set_fact:
+            new_pip_executable: "{{ new_pip_executable.stdout }}"
+
+      - name: Check new pip version
+        shell:
+            cmd: "{{ new_pip_executable }} --version"
+        register: new_pip_version
+        changed_when: False
+
+      - name: Set fact for new pip_version
+        set_fact:
+            new_pip_version: "{{ new_pip_version.stdout | regex_search('python3.[0-9]+') }}"
+
+  when: pip_need_install == True
+
+- set_fact:
+      pip_version: "{{ new_pip_version if pip_need_install else pip_version }}"
+      pip_executable: "{{ new_pip_executable if pip_need_install else pip_executable }}"
+      cacheable: "yes"
+
+- name: Install necessary pip packages
+  pip:
+      executable: "{{ pip_executable }}"
+      name: "{{ default_pip_packages + additional_pip_packages }}"
+      state: latest
+      extra_args: --user
+  when: pip_version == "python3.9"

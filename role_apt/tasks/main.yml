@@ -1,0 +1,76 @@
+---
+# tasks file for role_apt
+
+- name: Apt-get update and upgrade
+  become: yes
+  apt:
+      update_cache: yes
+      upgrade: "safe"
+  retries: 3
+  delay: 5
+  register: result
+  until: result is success
+
+- name: Make sure apt packages are present
+  become: yes
+  apt:
+      name: "{{ default_apt_packages + additional_apt_packages }}"
+      state: present
+  retries: 3
+  delay: 5
+  register: result
+  until: result is success
+
+- name: Make sure python3.9 ppa is present
+  become: yes
+  apt_repository:
+      repo: "ppa:deadsnakes/ppa"
+      state: present
+  retries: 3
+  delay: 5
+  register: result
+  until: result is success
+
+- name: Make sure python3.9 and python3.9-distutils are present
+  become: yes
+  apt:
+      name:
+          - python3.9
+          - python3.9-dev
+          - python3.9-distutils
+      state: latest
+  retries: 3
+  delay: 5
+  register: result
+  until: result is success
+
+- name: Make sure FFmpeg 5.x ppa:savoury1/ffmpeg4 is present
+  become: yes
+  apt_repository:
+      repo: "ppa:savoury1/ffmpeg4"
+      state: present
+  retries: 3
+  delay: 5
+  register: result
+  until: result is success
+
+- name: Make sure FFmpeg 5.x ppa:savoury1/ffmpeg5 is present
+  become: yes
+  apt_repository:
+      repo: "ppa:savoury1/ffmpeg5"
+      state: present
+  retries: 3
+  delay: 5
+  register: result
+  until: result is success
+
+- name: Make sure FFmpeg 5.x is present
+  become: yes
+  apt:
+      name:
+          - ffmpeg
+      state: latest
+  retries: 3
+  delay: 5
+  register: result
+  until: result is success

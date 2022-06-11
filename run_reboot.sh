@@ -1,0 +1,1 @@
+ansible-playbook -i hosts main-playbook.yml -e "is_reboot=True user_choice=ansible" --vault-password-file ./secret_key

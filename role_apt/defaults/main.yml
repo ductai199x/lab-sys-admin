@@ -1,0 +1,28 @@
+---
+# defaults file for role_apt
+default_apt_packages:
+  - cmake
+  - make
+  - automake
+  - vim
+  - git
+  - gcc
+  - g++
+  - zsh
+  - jq
+  - perl
+  - curl
+  - python3-tk
+  - python3-pip
+  - python3-cairo
+  - python3-dev
+  - magic-wormhole
+  - libx11-dev
+  - libvdpau-dev
+  - libva-dev
+  - libpng-dev
+  - libtiff-dev
+  - libjpeg-dev
+  - libcairo2-dev
+
+additional_apt_packages: []

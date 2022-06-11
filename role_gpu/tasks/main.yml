@@ -1,0 +1,77 @@
+---
+# tasks file for role_gpu
+- name: Parse nvidia-smi output
+  shell:
+      cmd: nvidia-smi -x -q | xq ".nvidia_smi_log.gpu"
+  environment:
+      PATH: "{{ env_path }}"
+  args:
+      executable: /bin/zsh
+  register: nvidia_smi
+  changed_when: False
+
+- name: Get Nvidia driver version
+  shell:
+      cmd: modinfo nvidia | grep -oP '(?<=^version:).*' | head -n1 | tr -d ' '
+  environment:
+      PATH: "{{ env_path }}"
+  args:
+      executable: /bin/zsh
+  register: nvidia_driver
+  changed_when: False
+
+- name: Get installed Cuda versions
+  shell:
+      cmd: dpkg -l | grep -oP '(?<=cuda-toolkit-)[0-9]+-[0-9]+' | uniq
+  environment:
+      PATH: "{{ env_path }}"
+  args:
+      executable: /bin/zsh
+  register: cuda_versions
+  changed_when: False
+
+- name: Get installed Cudnn versions
+  shell:
+      cmd: dpkg -l | grep -oP '(?<=cudnn[0-9])\ +[A-z0-9.\-\+]+' | tr -d ' ' | uniq
+  environment:
+      PATH: "{{ env_path }}"
+  args:
+      executable: /bin/zsh
+  register: cudnn_versions
+  changed_when: False
+
+- name: Set fact for nvidia-smi
+  set_fact:
+      nvidia_smi: "{{ nvidia_smi.stdout | from_json }}"
+
+- name: Set fact for GPU info
+  set_fact:
+      gpu_type: "{{ nvidia_smi | json_query(gpu_type_query) }}"
+      gpu_mem_usage: "{{ nvidia_smi | json_query(gpu_mem_usage_query)}}"
+      gpu_freq: "{{ nvidia_smi | json_query(gpu_freq_query)}}"
+      gpu_temp: "{{ nvidia_smi | json_query(gpu_temp_query)}}"
+      gpu_util: "{{ nvidia_smi | json_query(gpu_util_query) }}"
+      nvidia_driver: "{{ nvidia_driver.stdout }}"
+      cuda_versions: "{{ cuda_versions.stdout | replace('-', '.') | split('\n') }}"
+      cudnn_versions: "{{ cudnn_versions.stdout | replace('-', '.') | split('\n') }}"
+      cacheable: "yes"
+  vars:
+      gpu_type_query: "{{ 'product_name' if (nvidia_smi | type_debug == 'dict') else '[*].product_name' }}"
+      gpu_mem_usage_query: "{{ 'fb_memory_usage' if (nvidia_smi | type_debug == 'dict') else '[*].fb_memory_usage' }}"
+      gpu_freq_query: "{{ 'clocks' if (nvidia_smi | type_debug == 'dict') else '[*].clocks' }}"
+      gpu_temp_query: "{{ 'temperature.gpu_temp' if (nvidia_smi | type_debug == 'dict') else '[*].temperature.gpu_temp' }}"
+      gpu_util_query: "{{ 'utilization' if (nvidia_smi | type_debug == 'dict') else '[*].utilization' }}"
+
+- name: Output Lab Machine Statuses html file
+  template:
+      src: lab_machine_status.j2
+      dest: lab_machine_status.html
+  delegate_to: localhost
+  run_once: True
+  changed_when: False
+# - debug:
+#     msg: |
+#       "{{ gpu_type }}, {{ gpu_mem_usage }}, {{ gpu_freq }}, {{ gpu_temp }},
+#       {{ gpu_util }}, {{ nvidia_driver }}, {{ cuda_versions }}, {{ cudnn_versions }}"
+
+# - debug: msg="{{ ansible_facts }}"

@@ -1,0 +1,1 @@
+ansible-playbook -i hosts main-playbook.yml -e "is_update_upgrade=True" --vault-password-file ./secret_key

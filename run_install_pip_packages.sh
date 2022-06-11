@@ -1,0 +1,1 @@
+ansible-playbook -i hosts main-playbook.yml -e "is_install_pip_packages=True" --vault-password-file ./secret_key
