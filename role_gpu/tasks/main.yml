@@ -64,14 +64,16 @@
 
 - name: Output Lab Machine Statuses html file
   template:
-      src: lab_machine_status.j2
+      src: lab_machine_status.html.j2
       dest: lab_machine_status.html
   delegate_to: localhost
   run_once: True
   changed_when: False
-# - debug:
-#     msg: |
-#       "{{ gpu_type }}, {{ gpu_mem_usage }}, {{ gpu_freq }}, {{ gpu_temp }},
-#       {{ gpu_util }}, {{ nvidia_driver }}, {{ cuda_versions }}, {{ cudnn_versions }}"
 
-# - debug: msg="{{ ansible_facts }}"
+- name: Output Lab Machine Statuses yml file
+  template:
+      src: lab_machine_status.yml.j2
+      dest: lab_machine_status.yml
+  delegate_to: localhost
+  run_once: True
+  changed_when: False

@@ -1,7 +1,7 @@
 ---
 # main playbook
 - name: Main playbook for managing all servers
-  hosts: lab03
+  hosts: all
   vars_files:
       - vars/main.yml
       - vars/secrets.yml

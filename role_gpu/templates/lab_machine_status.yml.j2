@@ -1,0 +1,64 @@
+---
+{% for hostname in groups.all %}
+{{ hostname }}:
+{% if hostname not in ansible_play_hosts %}
+  - UNAVAILABLE:
+      gpu_mem_usage: 
+        total: "N/A"
+        used: "N/A"
+        free: "N/A"
+      gpu_freq: 
+        sm_clock: "N/A"
+        mem_clock: "N/A"
+      gpu_temp: "N/A"
+      gpu_util: 
+        gpu_util: "N/A"
+        memory_util: "N/A"
+        encoder_util: "N/A"
+        decoder_util: "N/A"
+      nvidia_driver: "N/A"
+      cuda_versions: "N/A"
+      cudnn_versions: "N/A"
+{% else %}
+{% if hostvars[hostname]["gpu_type"].__class__.__name__ == "AnsibleUnsafeText" %}
+  - {{ hostvars[hostname]["gpu_type"] }}:
+      gpu_mem_usage: 
+        total: "{{ hostvars[hostname]["gpu_mem_usage"]["total"] }}"
+        used: "{{ hostvars[hostname]["gpu_mem_usage"]["used"] }}"
+        free: "{{ hostvars[hostname]["gpu_mem_usage"]["free"] }}"
+      gpu_freq: 
+        sm_clock: "{{ hostvars[hostname]["gpu_freq"]["sm_clock"] }}"
+        mem_clock: "{{ hostvars[hostname]["gpu_freq"]["mem_clock"] }}"
+      gpu_temp: "{{ hostvars[hostname]["gpu_temp"] }}"
+      gpu_util: 
+        gpu_util: "{{ hostvars[hostname]["gpu_util"]["gpu_util"] }}"
+        memory_util: "{{ hostvars[hostname]["gpu_util"]["memory_util"] }}"
+        encoder_util: "{{ hostvars[hostname]["gpu_util"]["encoder_util"] }}"
+        decoder_util: "{{ hostvars[hostname]["gpu_util"]["decoder_util"] }}"
+      nvidia_driver: "{{ hostvars[hostname]["nvidia_driver"] }}"
+      cuda_versions: "{{ hostvars[hostname]["cuda_versions"] }}"
+      cudnn_versions: "{{ hostvars[hostname]["cudnn_versions"] }}"
+{% else %}
+{% for i in range(hostvars[hostname]["gpu_type"] | length) %}
+  - {{ hostvars[hostname]["gpu_type"][i] }}:
+      gpu_mem_usage:
+        total: "{{ hostvars[hostname]["gpu_mem_usage"][i]["total"] }}"
+        used: "{{ hostvars[hostname]["gpu_mem_usage"][i]["used"] }}"
+        free: "{{ hostvars[hostname]["gpu_mem_usage"][i]["free"] }}"
+      gpu_freq: 
+        sm_clock: "{{ hostvars[hostname]["gpu_freq"][i]["sm_clock"] }}"
+        mem_clock: "{{ hostvars[hostname]["gpu_freq"][i]["mem_clock"] }}"
+      gpu_temp: "{{ hostvars[hostname]["gpu_temp"][i] }}"
+      gpu_util:
+        gpu_util: "{{ hostvars[hostname]["gpu_util"][i]["gpu_util"] }}"
+        memory_util: "{{ hostvars[hostname]["gpu_util"][i]["memory_util"] }}"
+        encoder_util: "{{ hostvars[hostname]["gpu_util"][i]["encoder_util"] }}"
+        decoder_util: "{{ hostvars[hostname]["gpu_util"][i]["decoder_util"] }}"
+      nvidia_driver: "{{ hostvars[hostname]["nvidia_driver"] }}"
+      cuda_versions: "{{ hostvars[hostname]["cuda_versions"] }}"
+      cudnn_versions: "{{ hostvars[hostname]["cudnn_versions"] }}"
+
+{% endfor %}
+{% endif %}
+{% endif %}
+{% endfor %}
