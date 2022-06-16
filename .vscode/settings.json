@@ -5,4 +5,5 @@
         "*.j2": "ansible-jinja"
     },
     "prettier.printWidth": 110,
+    "editor.tabSize": 2,
 }

@@ -2,70 +2,70 @@
 # tasks file for role_gpu
 - name: Parse nvidia-smi output
   shell:
-      cmd: nvidia-smi -x -q | xq ".nvidia_smi_log.gpu"
+    cmd: nvidia-smi -x -q | xq ".nvidia_smi_log.gpu"
   environment:
-      PATH: "{{ env_path }}"
+    PATH: "{{ env_path }}"
   args:
-      executable: /bin/zsh
+    executable: /bin/zsh
   register: nvidia_smi
   changed_when: False
 
 - name: Get Nvidia driver version
   shell:
-      cmd: modinfo nvidia | grep -oP '(?<=^version:).*' | head -n1 | tr -d ' '
+    cmd: modinfo nvidia | grep -oP '(?<=^version:).*' | head -n1 | tr -d ' '
   environment:
-      PATH: "{{ env_path }}"
+    PATH: "{{ env_path }}"
   args:
-      executable: /bin/zsh
+    executable: /bin/zsh
   register: nvidia_driver
   changed_when: False
 
 - name: Get installed Cuda versions
   shell:
-      cmd: dpkg -l | grep -oP '(?<=cuda-toolkit-)[0-9]+-[0-9]+' | uniq
+    cmd: dpkg -l | grep -oP '(?<=cuda-toolkit-)[0-9]+-[0-9]+' | uniq
   environment:
-      PATH: "{{ env_path }}"
+    PATH: "{{ env_path }}"
   args:
-      executable: /bin/zsh
+    executable: /bin/zsh
   register: cuda_versions
   changed_when: False
 
 - name: Get installed Cudnn versions
   shell:
-      cmd: dpkg -l | grep -oP '(?<=cudnn[0-9])\ +[A-z0-9.\-\+]+' | tr -d ' ' | uniq
+    cmd: dpkg -l | grep -oP '(?<=cudnn[0-9])\ +[A-z0-9.\-\+]+' | tr -d ' ' | uniq
   environment:
-      PATH: "{{ env_path }}"
+    PATH: "{{ env_path }}"
   args:
-      executable: /bin/zsh
+    executable: /bin/zsh
   register: cudnn_versions
   changed_when: False
 
 - name: Set fact for nvidia-smi
   set_fact:
-      nvidia_smi: "{{ nvidia_smi.stdout | from_json }}"
+    nvidia_smi: "{{ nvidia_smi.stdout | from_json }}"
 
 - name: Set fact for GPU info
   set_fact:
-      gpu_type: "{{ [ nvidia_smi | json_query(gpu_type_query) ] | flatten }}"
-      gpu_mem_usage: "{{ [ nvidia_smi | json_query(gpu_mem_usage_query)] | flatten }}"
-      gpu_freq: "{{ [ nvidia_smi | json_query(gpu_freq_query) ] | flatten }}"
-      gpu_temp: "{{ [ nvidia_smi | json_query(gpu_temp_query) ] | flatten }}"
-      gpu_util: "{{ [ nvidia_smi | json_query(gpu_util_query) ] | flatten }}"
-      gpu_processes: "{{ [ nvidia_smi | json_query(gpu_processes_query) ] | flatten }}"
-      nvidia_driver: "{{ nvidia_driver.stdout }}"
-      cuda_versions: "{{ cuda_versions.stdout | replace('-', '.') | split('\n') }}"
-      cudnn_versions: "{{ cudnn_versions.stdout | replace('-', '.') | split('\n') }}"
-      cacheable: "yes"
+    gpu_type: "{{ [ nvidia_smi | json_query(gpu_type_query) ] | flatten }}"
+    gpu_mem_usage: "{{ [ nvidia_smi | json_query(gpu_mem_usage_query)] | flatten }}"
+    gpu_freq: "{{ [ nvidia_smi | json_query(gpu_freq_query) ] | flatten }}"
+    gpu_temp: "{{ [ nvidia_smi | json_query(gpu_temp_query) ] | flatten }}"
+    gpu_util: "{{ [ nvidia_smi | json_query(gpu_util_query) ] | flatten }}"
+    gpu_processes: "{{ [ nvidia_smi | json_query(gpu_processes_query) ] | flatten }}"
+    nvidia_driver: "{{ nvidia_driver.stdout }}"
+    cuda_versions: "{{ cuda_versions.stdout | replace('-', '.') | split('\n') }}"
+    cudnn_versions: "{{ cudnn_versions.stdout | replace('-', '.') | split('\n') }}"
+    cacheable: "yes"
   vars:
-      gpu_type_query: "product_name || [*].product_name"
-      gpu_mem_usage_query: "fb_memory_usage || [*].fb_memory_usage"
-      gpu_freq_query: "clocks || [*].clocks"
-      gpu_temp_query: "temperature.gpu_temp || [*].temperature.gpu_temp"
-      gpu_util_query: "utilization || [*].utilization"
-      gpu_processes_query: "processes || [*].processes"
+    gpu_type_query: "product_name || [*].product_name"
+    gpu_mem_usage_query: "fb_memory_usage || [*].fb_memory_usage"
+    gpu_freq_query: "clocks || [*].clocks"
+    gpu_temp_query: "temperature.gpu_temp || [*].temperature.gpu_temp"
+    gpu_util_query: "utilization || [*].utilization"
+    gpu_processes_query: "processes || [*].processes"
 
 - set_fact:
-      gpu_proc_ids: "{{ gpu_processes | json_query('[*].process_info[*].pid') }}"
+    gpu_proc_ids: "{{ gpu_processes | json_query('[*].process_info[*].pid') }}"
 
 # https://man7.org/linux/man-pages/man1/ps.1.html
 # AIX FORMAT DESCRIPTORS:
@@ -92,36 +92,116 @@
 
 - name: Grab processes' information from process ids
   shell:
-      cmd: ps --no-headers -p "{{ item }}" -o "%U," -o lstart -o ",%t,%a"
+    cmd: ps --no-headers -p "{{ item }}" -o "%U," -o lstart -o ",%t,%a"
   environment:
-      PATH: "{{ env_path }}"
+    PATH: "{{ env_path }}"
   args:
-      executable: /bin/zsh
+    executable: /bin/zsh
   with_items: "{{ gpu_proc_ids }}"
   register: process_info
   changed_when: False
   failed_when: False
 
 - set_fact:
-      process_info_dict: "{{ _dict }}"
+    process_info_dict: "{{ _dict }}"
   vars:
-      _result: "{{ dict(process_info.results | json_query('[?rc == `0`].[item, stdout]')) }}"
-      _proc_id: "{{ _result.keys() | list }}"
-      _proc_info: "{{ _result.values() }}"
-      _dict: "{{ dict(_proc_id|zip(_proc_info)) }}"
+    _result: "{{ dict(process_info.results | json_query('[?rc == `0`].[item, stdout]')) }}"
+    _proc_id: "{{ _result.keys() | list }}"
+    _proc_info: "{{ _result.values() }}"
+    _dict: "{{ dict(_proc_id|zip(_proc_info)) }}"
 
 - name: Output Lab Machine Statuses html file
   template:
-      src: lab_machine_status.html.j2
-      dest: lab_machine_status.html
+    src: lab_machine_status.html.j2
+    dest: lab_machine_status.html
   delegate_to: localhost
   run_once: True
   changed_when: False
 
 - name: Output Lab Machine Statuses yml file
   template:
-      src: lab_machine_status.yml.j2
-      dest: lab_machine_status.yml
+    src: lab_machine_status.yml.j2
+    dest: internal-web-page/public/lab_machine_status.yml
   delegate_to: localhost
   run_once: True
   changed_when: False
+
+- name: Create directory to store the internal web page
+  become: True
+  file:
+    path: /internal_web
+    owner: ansible
+    group: ansible
+    mode: 0777
+    state: directory
+  delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+  run_once: True
+
+- name: Copy the files over to the internal web page
+  become: True
+  copy:
+    src: "{{ item }}"
+    dest: /internal_web
+    owner: ansible
+    group: ansible
+    mode: 0775
+  with_items:
+    - "internal-web-page/pages"
+    - "internal-web-page/public"
+    - "internal-web-page/styles"
+    - "internal-web-page/.eslintrc.json"
+    - "internal-web-page/.gitignore"
+    - "internal-web-page/next-env.d.ts"
+    - "internal-web-page/next.config.js"
+    - "internal-web-page/package-lock.json"
+    - "internal-web-page/package.json"
+    - "internal-web-page/README.md"
+    - "internal-web-page/tsconfig.json"
+    - "internal-web-page/yarn.lock"
+  delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+  run_once: True
+
+- name: Get previous `npm run start` process if it's running
+  become: True
+  pids:
+    pattern: npm\s+run\s+start.*
+  register: npm_run_start_pids
+  delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+  run_once: True
+
+- debug: msg="{{ npm_run_start_pids }}"
+  delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+  run_once: True
+
+# - name: End these process before building and starting it back up
+#   become: True
+#   shell:
+#     cmd: kill {{ item }}
+#   with_items: "{{ npm_run_start_pids.pids }}"
+#   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+#   run_once: True
+#   failed_when: False
+
+# - name: Run `npm install` to install the node_modules in package.json
+#   become: True
+#   shell:
+#     cmd: npm install -S -E
+#     chdir: /internal_web
+#   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+#   run_once: True
+
+# - name: Run `npm run build` to build the webpage up
+#   become: True
+#   shell:
+#     cmd: npm run build
+#     chdir: /internal_web
+#   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+#   run_once: True
+
+# - name: Run `npm run start` to start the webpage at port 3000
+#   become: True
+#   shell:
+#     cmd: nohup npm run start &
+#     chdir: /internal_web
+#   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+#   run_once: True

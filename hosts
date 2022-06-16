@@ -27,3 +27,6 @@ lab27 ansible_ssh_port=27000
 
 [labservers:vars]
 ansible_ssh_host=10.248.16.141
+
+[lab_internal_web_host]
+lab03

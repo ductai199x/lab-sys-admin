@@ -1,4 +1,3 @@
-import fs from "fs";
 import YAML from "yaml";
 
 import { useEffect, useState } from "react";
@@ -32,9 +31,7 @@ interface GpuStats {
 }
 
 interface AllGpuStats {
-  data: {
-    [name: string]: GpuStats[];
-  };
+  [name: string]: GpuStats[];
 }
 
 interface GpuProc {
@@ -82,8 +79,9 @@ const useEscape = (onEscape: any, onEscapeParams: any) => {
   }, []);
 };
 
-const LabStatusPage: NextPage<AllGpuStats> = ({ data }) => {
-  const [mounted, setMounted] = useState(false);
+const LabStatusPage: NextPage = () => {
+  const [data, setData] = useState<AllGpuStats>()
+  const [isLoading, setLoading] = useState(false)
   const [gpu_running_processes, setGpuRunningProcesses] = useState<GpuProc[]>([]);
   const [show_gpu_procs, setShowGpuProcs] = useState(false);
   const [show_gpu_procs_spawn_pos, setShowGpuProcsSpawnPos] = useState({
@@ -94,8 +92,20 @@ const LabStatusPage: NextPage<AllGpuStats> = ({ data }) => {
   const cursor_pos = useMousePosition();
   const escape = useEscape(setShowGpuProcs, false);
 
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return <div></div>;
+  useEffect(() => {
+    setLoading(true)
+    fetch('lab_machine_status.yml')
+      .then((res) => res.blob())
+      .then((blob) => blob.text())
+      .then((text) => YAML.parse(text))
+      .then((data) => {
+        setData(data)
+        setLoading(false)
+      })
+  }, [])
+
+  if (isLoading) return <p>Loading...</p>
+  if (!data) return <p>No profile data</p>
 
   const extractInt = (strVal: string) => parseInt(strVal.split(" ")[0]);
 
@@ -247,16 +257,5 @@ const LabStatusPage: NextPage<AllGpuStats> = ({ data }) => {
     </div>
   );
 };
-
-export async function getStaticProps() {
-  const file = fs.readFileSync("/home/roggy/1-workdir/2-lab-sys-admin/lab_machine_status.yml", "utf8");
-  const data = await YAML.parse(file);
-
-  return {
-    props: {
-      data,
-    },
-  };
-}
 
 export default LabStatusPage;
