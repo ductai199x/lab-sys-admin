@@ -65,7 +65,7 @@
       gpu_processes_query: "processes || [*].processes"
 
 - set_fact:
-      gpu_proc_ids: "{{ (gpu_processes | json_query('[*].process_info.pid || [*][*].process_info.pid') | flatten) if gpu_processes | length > 0 else [] }}"
+      gpu_proc_ids: "{{ gpu_processes | json_query('[*].process_info[*].pid') }}"
 
 # https://man7.org/linux/man-pages/man1/ps.1.html
 # AIX FORMAT DESCRIPTORS:
