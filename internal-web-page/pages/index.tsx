@@ -20,7 +20,7 @@ const Home: NextPage = () => {
         <div className={styles.grid}>
           <a href="lab-status" className={styles.card}>
             <h2>Lab Machine Status</h2>
-            <p>A page detailing the statuses of the lab`&apos;`s machines</p>
+            <p>A page detailing the statuses of the lab &apos;s machines</p>
           </a>
 
          

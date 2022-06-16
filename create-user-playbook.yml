@@ -1,7 +1,7 @@
 ---
 # create new user playbook
 - name: Create user on a linux server
-  hosts: all
+  hosts: labservers
   become: yes
   gather_facts: false
   vars_files:
