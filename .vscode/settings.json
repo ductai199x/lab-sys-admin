@@ -3,5 +3,6 @@
         "*.yml": "ansible",
         "*.yaml": "ansible",
         "*.j2": "ansible-jinja"
-    }
+    },
+    "prettier.printWidth": 110,
 }
