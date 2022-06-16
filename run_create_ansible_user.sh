@@ -1,0 +1,1 @@
+ansible-playbook -i hosts create-user-playbook.yml -e "user=ansible" -e "password={{ _ansible_password }}" --vault-password-file ./secret_key
