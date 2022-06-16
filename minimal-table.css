@@ -23,11 +23,16 @@ td {
 }
 
 tr.unavailable td {
-  background-color: rgb(237, 67, 37);
+  background-color: rgb(133, 25, 6);
+  color: beige;
 }
 
 tr.available td {
-  background-color: rgb(121, 245, 170);
+  background-color: rgb(146, 243, 185);
+}
+
+tr.inuse td {
+  background-color: rgb(246, 219, 15);
 }
 
 caption {

@@ -64,57 +64,33 @@
             <td>N/A</td>
           </tr>
         {% else %}
-          {% if hostvars[hostname]["gpu_type"].__class__.__name__ == "AnsibleUnsafeText" %}
-            {% if hostvars[hostname]["gpu_mem_usage"]["used"][:-4] | int > 50 %}
-            <tr class="unavailable">
-            {% else %}
-            <tr class="available">
-            {% endif %}
-                <th>{{ hostname }}</th>
-                <td>{{ hostvars[hostname]["gpu_type"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_mem_usage"]["total"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_mem_usage"]["used"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_mem_usage"]["free"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_freq"]["sm_clock"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_freq"]["mem_clock"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_temp"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_util"]["gpu_util"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_util"]["memory_util"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_util"]["encoder_util"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_util"]["decoder_util"] }}</td>
-                <td>{{ hostvars[hostname]["nvidia_driver"] }}</td>
-                <td>{{ hostvars[hostname]["cuda_versions"] }}</td>
-                <td>{{ hostvars[hostname]["cudnn_versions"] }}</td>
-            </tr>
+          {% for i in range(hostvars[hostname]["gpu_type"] | length) %}
+          {% if hostvars[hostname]["gpu_mem_usage"][i]["used"][:-4] | int > 500 %}
+          <tr class="inuse">
           {% else %}
-            {% for i in range(hostvars[hostname]["gpu_type"] | length) %}
-            {% if hostvars[hostname]["gpu_mem_usage"][i]["used"][:-4] | int > 50 %}
-            <tr class="unavailable">
-            {% else %}
-            <tr class="available">
-            {% endif %}
-                {% if i == 0 %}
-                <th rowspan="{{ hostvars[hostname]["gpu_type"] | length }}">{{ hostname }}</th>
-                {% endif %}
-
-                <td>{{ hostvars[hostname]["gpu_type"][i] }}</td>
-                <td>{{ hostvars[hostname]["gpu_mem_usage"][i]["total"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_mem_usage"][i]["used"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_mem_usage"][i]["free"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_freq"][i]["sm_clock"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_freq"][i]["mem_clock"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_temp"][i] }}</td>
-                <td>{{ hostvars[hostname]["gpu_util"][i]["gpu_util"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_util"][i]["memory_util"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_util"][i]["encoder_util"] }}</td>
-                <td>{{ hostvars[hostname]["gpu_util"][i]["decoder_util"] }}</td>
-                <td>{{ hostvars[hostname]["nvidia_driver"] }}</td>
-                <td>{{ hostvars[hostname]["cuda_versions"] }}</td>
-                <td>{{ hostvars[hostname]["cudnn_versions"] }}</td>
-
-            </tr>
-            {% endfor %}
+          <tr class="available">
           {% endif %}
+              {% if i == 0 %}
+              <th rowspan="{{ hostvars[hostname]["gpu_type"] | length }}">{{ hostname }}</th>
+              {% endif %}
+
+              <td>{{ hostvars[hostname]["gpu_type"][i] }}</td>
+              <td>{{ hostvars[hostname]["gpu_mem_usage"][i]["total"] }}</td>
+              <td>{{ hostvars[hostname]["gpu_mem_usage"][i]["used"] }}</td>
+              <td>{{ hostvars[hostname]["gpu_mem_usage"][i]["free"] }}</td>
+              <td>{{ hostvars[hostname]["gpu_freq"][i]["sm_clock"] }}</td>
+              <td>{{ hostvars[hostname]["gpu_freq"][i]["mem_clock"] }}</td>
+              <td>{{ hostvars[hostname]["gpu_temp"][i] }}</td>
+              <td>{{ hostvars[hostname]["gpu_util"][i]["gpu_util"] }}</td>
+              <td>{{ hostvars[hostname]["gpu_util"][i]["memory_util"] }}</td>
+              <td>{{ hostvars[hostname]["gpu_util"][i]["encoder_util"] }}</td>
+              <td>{{ hostvars[hostname]["gpu_util"][i]["decoder_util"] }}</td>
+              <td>{{ hostvars[hostname]["nvidia_driver"] }}</td>
+              <td>{{ hostvars[hostname]["cuda_versions"] }}</td>
+              <td>{{ hostvars[hostname]["cudnn_versions"] }}</td>
+
+          </tr>
+          {% endfor %}
         {% endif %}
       {% endfor %}
     </table>

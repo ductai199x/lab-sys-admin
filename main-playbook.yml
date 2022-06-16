@@ -44,4 +44,4 @@
         include_role:
             name: role_gpu
         when: is_get_gpu_info | bool == True
- 
+
