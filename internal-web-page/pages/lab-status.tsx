@@ -1,8 +1,8 @@
 import YAML from "yaml";
-
 import { useEffect, useState } from "react";
 import { Button, Card, Collapse, Intent, Text } from "@blueprintjs/core";
 import type { NextPage } from "next";
+import styles from "../styles/LabStatus.module.css";
 
 interface GpuStats {
   [name: string]: {
@@ -67,6 +67,28 @@ const useMousePosition = () => {
   return mousePosition;
 };
 
+const useWindowDimensions = () => {
+  const [windowSize, setWindowSize] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const updateWindowSize = () => {
+      setWindowSize({
+        x: window.innerWidth,
+        y: window.innerHeight,
+      });
+    };
+
+    window.addEventListener("resize", updateWindowSize);
+    updateWindowSize();
+
+    return () => {
+      window.removeEventListener("resize", updateWindowSize);
+    };
+  }, []);
+
+  return windowSize;
+};
+
 const useEscape = (onEscape: any, onEscapeParams: any) => {
   useEffect(() => {
     window.addEventListener("keydown", (event) => {
@@ -79,9 +101,9 @@ const useEscape = (onEscape: any, onEscapeParams: any) => {
   }, []);
 };
 
-const LabStatusPage: NextPage = () => {
-  const [data, setData] = useState<AllGpuStats>()
-  const [isLoading, setLoading] = useState(false)
+const LabStatus: NextPage = () => {
+  const [data, setData] = useState<AllGpuStats>();
+  const [isLoading, setLoading] = useState(false);
   const [gpu_running_processes, setGpuRunningProcesses] = useState<GpuProc[]>([]);
   const [show_gpu_procs, setShowGpuProcs] = useState(false);
   const [show_gpu_procs_spawn_pos, setShowGpuProcsSpawnPos] = useState({
@@ -90,22 +112,23 @@ const LabStatusPage: NextPage = () => {
   });
 
   const cursor_pos = useMousePosition();
+  const window_size = useWindowDimensions();
   const escape = useEscape(setShowGpuProcs, false);
 
   useEffect(() => {
-    setLoading(true)
-    fetch('lab_machine_status.yml')
+    setLoading(true);
+    fetch("lab_machine_status.yml")
       .then((res) => res.blob())
       .then((blob) => blob.text())
       .then((text) => YAML.parse(text))
       .then((data) => {
-        setData(data)
-        setLoading(false)
-      })
-  }, [])
+        setData(data);
+        setLoading(false);
+      });
+  }, []);
 
-  if (isLoading) return <p>Loading...</p>
-  if (!data) return <p>No profile data</p>
+  if (isLoading) return <p>Loading...</p>;
+  if (!data) return <p>No profile data</p>;
 
   const extractInt = (strVal: string) => parseInt(strVal.split(" ")[0]);
 
@@ -147,7 +170,7 @@ const LabStatusPage: NextPage = () => {
   };
 
   const getProcTable = (gpu_running_processes: GpuProc[]) => (
-    <table className="bp4-html-table-condensed">
+    <table className={`${styles["proc-info-wrapper-table"]} bp4-html-table-condensed`}>
       <thead>
         <tr>
           <th>pid</th>
@@ -182,15 +205,19 @@ const LabStatusPage: NextPage = () => {
   return (
     <div>
       <div
-        className="proc-info-wrapper"
+        className={`${styles["proc-info-wrapper"]}`}
         style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          margin: 10,
-          zIndex: 10,
-          transform: `translate(${show_gpu_procs_spawn_pos.x + 5}px, ${show_gpu_procs_spawn_pos.y + 5}px)`,
-          backgroundColor: "rgba(174,249,248,1)",
+          transform: `translate(
+            ${
+              window_size.x - (show_gpu_procs_spawn_pos.x + 50) > 50
+                ? show_gpu_procs_spawn_pos.x + 30
+                : show_gpu_procs_spawn_pos.x - 50
+            }px, 
+            ${
+              window_size.y - (show_gpu_procs_spawn_pos.y + 150) > 150
+                ? show_gpu_procs_spawn_pos.y + 30
+                : show_gpu_procs_spawn_pos.y - 150
+            }px)`,
         }}
       >
         <Collapse isOpen={show_gpu_procs}>
@@ -199,7 +226,9 @@ const LabStatusPage: NextPage = () => {
         </Collapse>
       </div>
 
-      <table className="bp4-html-table bp4-interactive">
+      <h1>Lab Machine Statuses</h1>
+
+      <table className={`${styles["lab-status-table"]} bp4-html-table bp4-interactive`}>
         <thead>
           <tr>
             <th rowSpan={2}>machine</th>
@@ -230,7 +259,7 @@ const LabStatusPage: NextPage = () => {
               Object.keys(host_obj).map((gpu_name) => (
                 <tr
                   key="`${host_name}_${gpu_name}`"
-                  className={isGpuAvailable(gpu_name, host_obj[gpu_name].gpu_mem_usage.used)}
+                  className={styles[isGpuAvailable(gpu_name, host_obj[gpu_name].gpu_mem_usage.used)]}
                   onClick={(e) => getGpuRunningProcesses(host_name, gpu_idx, gpu_name)}
                 >
                   {gpu_idx == 0 ? <th rowSpan={data[host_name].length}>{host_name}</th> : null}
@@ -258,4 +287,4 @@ const LabStatusPage: NextPage = () => {
   );
 };
 
-export default LabStatusPage;
+export default LabStatus;

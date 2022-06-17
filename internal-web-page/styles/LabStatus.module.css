@@ -1,0 +1,46 @@
+div.proc-info-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  margin: 10;
+  z-index: 10;
+  background-color: rgba(174,249,248,1);
+}
+
+table.lab-status-table, table.proc-info-wrapper-table {
+  border-collapse: collapse;
+  border: 2px solid rgb(200,200,200);
+  letter-spacing: 1px;
+  font-size: 0.8rem;
+}
+
+.lab-status-table td, 
+.lab-status-table th,
+.proc-info-wrapper-table td,
+.proc-info-wrapper-table th {
+  border: 1px solid rgb(190,190,190);
+  padding: 10px 20px;
+}
+
+.lab-status-table th, .proc-info-wrapper-table th {
+  background-color: rgb(235,235,235);
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.lab-status-table td {
+  text-align: center !important;
+}
+
+.lab-status-table tr.unavailable td {
+  background-color: rgb(133, 25, 6);
+  color: beige;
+}
+
+.lab-status-table tr.available td {
+  background-color: rgb(146, 243, 185);
+}
+
+.lab-status-table tr.inuse td {
+  background-color: rgb(246, 219, 15);
+}

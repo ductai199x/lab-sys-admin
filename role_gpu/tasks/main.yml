@@ -173,35 +173,41 @@
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
   run_once: True
 
-# - name: End these process before building and starting it back up
-#   become: True
-#   shell:
-#     cmd: kill {{ item }}
-#   with_items: "{{ npm_run_start_pids.pids }}"
-#   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-#   run_once: True
-#   failed_when: False
+- set_fact:
+    is_rebuild_webpage: "{{ is_rebuild_webpage | default(False) }}"
 
-# - name: Run `npm install` to install the node_modules in package.json
-#   become: True
-#   shell:
-#     cmd: npm install -S -E
-#     chdir: /internal_web
-#   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-#   run_once: True
+- name: Rebuild webpage
+  block:
+  - name: End these process before building and starting it back up
+    become: True
+    shell:
+      cmd: kill {{ item }}
+    with_items: "{{ npm_run_start_pids.pids }}"
+    delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+    run_once: True
+    failed_when: False
 
-# - name: Run `npm run build` to build the webpage up
-#   become: True
-#   shell:
-#     cmd: npm run build
-#     chdir: /internal_web
-#   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-#   run_once: True
+  - name: Run `npm install` to install the node_modules in package.json
+    become: True
+    shell:
+      cmd: npm install -S -E
+      chdir: /internal_web
+    delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+    run_once: True
 
-# - name: Run `npm run start` to start the webpage at port 3000
-#   become: True
-#   shell:
-#     cmd: nohup npm run start &
-#     chdir: /internal_web
-#   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-#   run_once: True
+  - name: Run `npm run build` to build the webpage up
+    become: True
+    shell:
+      cmd: npm run build
+      chdir: /internal_web
+    delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+    run_once: True
+
+  - name: Run `npm run start` to start the webpage at port 3000
+    become: True
+    shell:
+      cmd: nohup npm run start &
+      chdir: /internal_web
+    delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+    run_once: True
+  when: is_rebuild_webpage | bool == True
