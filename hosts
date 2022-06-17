@@ -24,6 +24,7 @@ lab24 ansible_ssh_port=24000
 lab25 ansible_ssh_port=25000
 lab26 ansible_ssh_port=26000
 lab27 ansible_ssh_port=27000
+lab28 ansible_ssh_port=28000
 
 [labservers:vars]
 ansible_ssh_host=10.248.16.141

@@ -164,7 +164,7 @@
 - name: Get previous `npm run start` process if it's running
   become: True
   pids:
-    pattern: npm\s+run\s+start.*
+    pattern: (node|npm)\s+(.*)\s+start.*
   register: npm_run_start_pids
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
   run_once: True

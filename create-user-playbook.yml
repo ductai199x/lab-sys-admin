@@ -1,12 +1,14 @@
 ---
 # create new user playbook
 - name: Create user on a linux server
-  hosts: labservers
+  hosts: "{{ target_hosts | default('labservers') }}"
   become: yes
   gather_facts: false
   vars_files:
       - vars/main.yml
       - vars/secrets.yml
+  vars:
+      - ansible_ssh_pass: "{{ ansible_become_password }}"
   tasks:
       - debug: msg="user:{{ user }} password:{{ password }}"
         delegate_to: localhost
@@ -17,18 +19,23 @@
           prompt: "Just making sure you have the correct user and password \
           because this is not easy to be undone. Ctrl+C then A to abort"
 
+      - name: Ensure group "misl" exists
+        group:
+          name: misl
+          state: present
+
       - name: Create a login user
         user:
             name: "{{ user }}"
             password: "{{ password | password_hash('sha512') }}"
             shell: "/bin/bash"
             groups:
-                - sudo
+                # - sudo
                 - misl
             state: present
 
-      - name: Add public key to authorized_keys
-        authorized_key:
-            user: "{{ user }}"
-            state: present
-            key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+      # - name: Add public key to authorized_keys
+      #   authorized_key:
+      #       user: "{{ user }}"
+      #       state: present
+      #       key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
