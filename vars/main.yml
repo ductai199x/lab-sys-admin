@@ -1,6 +1,6 @@
 user_choice: "admin"
-ansible_user: "{{ _admin_username if user_choice == 'admin' else _ansible_username }}"
-ansible_become_password: "{{ _admin_password if user_choice == 'admin' else _ansible_password }}"
+ansible_user: "{{ _admin_username if user_choice == 'admin' else _ansbl_username }}"
+ansible_become_password: "{{ _admin_password if user_choice == 'admin' else _ansbl_password }}"
 is_reboot: False
 is_update_upgrade: False
 is_install_pip_packages: False
