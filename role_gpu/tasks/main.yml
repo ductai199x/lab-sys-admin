@@ -175,6 +175,8 @@
 
 - set_fact:
     is_rebuild_webpage: "{{ is_rebuild_webpage | default(False) }}"
+  delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+  run_once: True
 
 - name: Rebuild webpage
   block:
@@ -206,7 +208,7 @@
   - name: Run `npm run start` to start the webpage at port 3000
     become: True
     shell:
-      cmd: nohup npm run start &
+      cmd: nohup npm run start >> /dev/null 2>&1 &
       chdir: /internal_web
     delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
     run_once: True
