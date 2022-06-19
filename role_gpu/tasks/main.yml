@@ -107,7 +107,7 @@
   vars:
     _result: "{{ dict(process_info.results | json_query('[?rc == `0`].[item, stdout]')) }}"
     _proc_id: "{{ _result.keys() | list }}"
-    _proc_info: "{{ _result.values() }}"
+    _proc_info: "{{ _result.values() | map('regex_replace', '\"', '') | list }}"
     _dict: "{{ dict(_proc_id|zip(_proc_info)) }}"
 
 - name: Output Lab Machine Statuses html file
