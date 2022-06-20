@@ -34,8 +34,8 @@
                 - misl
             state: present
 
-      # - name: Add public key to authorized_keys
-      #   authorized_key:
-      #       user: "{{ user }}"
-      #       state: present
-      #       key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+      - name: Add public key to authorized_keys
+        authorized_key:
+            user: "{{ user }}"
+            state: present
+            key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
