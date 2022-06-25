@@ -26,5 +26,8 @@ lab26 ansible_ssh_host=10.0.0.6
 lab27 ansible_ssh_host=10.0.0.7
 lab28 ansible_ssh_host=10.0.0.8
 
+[labservers:vars]
+host_key_checking=False
+
 [lab_internal_web_host]
 lab03
