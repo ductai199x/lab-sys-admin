@@ -1,5 +1,5 @@
 [labservers]
-lab03 ansible_ssh_port=3000
+lab03 ansible_ssh_host=localhost
 lab04 ansible_ssh_port=4000
 lab05 ansible_ssh_port=5000
 lab06 ansible_ssh_port=6000
