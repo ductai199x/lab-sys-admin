@@ -10,7 +10,7 @@
   vars:
       - ansible_ssh_pass: "{{ ansible_become_password }}"
   tasks:
-      - debug: msg="user:{{ user }} password:{{ password }}"
+      - debug: msg="user:{{ user }} password:{{ password }} groups:{{ user_groups }}"
         delegate_to: localhost
         run_once: True
         
@@ -29,9 +29,7 @@
             name: "{{ user }}"
             password: "{{ password | password_hash('sha512') }}"
             shell: "/bin/bash"
-            groups:
-                # - sudo
-                - misl
+            groups: "{{ user_groups }}" 
             state: present
 
       - name: Add public key to authorized_keys
