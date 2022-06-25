@@ -1,33 +1,30 @@
 [labservers]
 lab03 ansible_ssh_host=localhost
-lab04 ansible_ssh_port=4000
-lab05 ansible_ssh_port=5000
-lab06 ansible_ssh_port=6000
-lab07 ansible_ssh_port=7000
-lab08 ansible_ssh_port=8000
-lab09 ansible_ssh_port=9000
-lab10 ansible_ssh_port=10000
-lab11 ansible_ssh_port=11000
-lab12 ansible_ssh_port=12000
-lab13 ansible_ssh_port=13000
-lab14 ansible_ssh_port=14000
-lab15 ansible_ssh_port=15000
-lab16 ansible_ssh_port=16000
-lab17 ansible_ssh_port=17000
-lab18 ansible_ssh_port=18000
-lab19 ansible_ssh_port=19000
-lab20 ansible_ssh_port=20000
-lab21 ansible_ssh_port=21000
-lab22 ansible_ssh_port=22000
-lab23 ansible_ssh_port=23000
-lab24 ansible_ssh_port=24000
-lab25 ansible_ssh_port=25000
-lab26 ansible_ssh_port=26000
-lab27 ansible_ssh_port=27000
-lab28 ansible_ssh_port=28000
-
-[labservers:vars]
-ansible_ssh_host=10.248.16.141
+lab04 ansible_ssh_host=10.0.0.4
+lab05 ansible_ssh_host=10.0.0.5
+lab06 ansible_ssh_host=10.0.0.6
+lab07 ansible_ssh_host=10.0.0.7
+lab08 ansible_ssh_host=10.0.0.8
+lab09 ansible_ssh_host=10.0.0.9
+lab10 ansible_ssh_host=10.0.0.0
+lab11 ansible_ssh_host=10.0.0.1
+lab12 ansible_ssh_host=10.0.0.2
+lab13 ansible_ssh_host=10.0.0.3
+lab14 ansible_ssh_host=10.0.0.4
+lab15 ansible_ssh_host=10.0.0.5
+lab16 ansible_ssh_host=10.0.0.6
+lab17 ansible_ssh_host=10.0.0.7
+lab18 ansible_ssh_host=10.0.0.8
+lab19 ansible_ssh_host=10.0.0.9
+lab20 ansible_ssh_host=10.0.0.0
+lab21 ansible_ssh_host=10.0.0.1
+lab22 ansible_ssh_host=10.0.0.2
+lab23 ansible_ssh_host=10.0.0.3
+lab24 ansible_ssh_host=10.0.0.4
+lab25 ansible_ssh_host=10.0.0.5
+lab26 ansible_ssh_host=10.0.0.6
+lab27 ansible_ssh_host=10.0.0.7
+lab28 ansible_ssh_host=10.0.0.8
 
 [lab_internal_web_host]
 lab03

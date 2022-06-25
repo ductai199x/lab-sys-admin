@@ -37,3 +37,4 @@
             user: "{{ user }}"
             state: present
             key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+        when: user == _ansbl_username
