@@ -12,7 +12,6 @@ default_apt_packages:
   - jq
   - perl
   - curl
-  - duf
   - python3-tk
   - python3-pip
   - python3-cairo
