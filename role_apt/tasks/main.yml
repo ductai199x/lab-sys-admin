@@ -4,7 +4,7 @@
 - name: Fix-broken installs in-case something need to be fixed before update upgrade
   become: True
   shell:
-    cmd: sudo apt --fix-broken install
+    cmd: echo "Y" | sudo apt --fix-broken install
   changed_when: False
   failed_when: False
 
