@@ -14,12 +14,18 @@
   failed_when: False
 
 - set_fact:
-      user_process_dict: "{{ _dict }}"
-  vars:
-      result: "{{ dict(processes.results | json_query('[?rc == `0`].[item, stdout]')) }}"
       _user: "{{ result.keys() | list | difference(groups['lab_internal_web_host']) }}"
       _processes: "{{ result.values() | map('split', '\n') | list }}"
-      _dict: "{{ dict(_user|zip(_processes)) }}"
+  vars:
+      result: "{{ dict(processes.results | json_query('[?rc == `0`].[item, stdout]')) }}"
+
+- set_fact:
+      user_process_dict: "{{ dict(_user|zip(_processes)) }}"
+  # vars:
+      # result: "{{ dict(processes.results | json_query('[?rc == `0`].[item, stdout]')) }}"
+      # _user: "{{ result.keys() | list | difference(groups['lab_internal_web_host']) }}"
+      # _processes: "{{ result.values() | map('split', '\n') | list }}"
+      # _dict: "{{  }}"
 
 - debug: msg="{{ user_process_dict }}"
 
