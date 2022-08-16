@@ -17,7 +17,7 @@
       user_process_dict: "{{ _dict }}"
   vars:
       result: "{{ dict(processes.results | json_query('[?rc == `0`].[item, stdout]')) }}"
-      _user: "{{ result.keys() | list }}"
+      _user: "{{ result.keys() | list | difference(['lab03']) }}"
       _processes: "{{ result.values() | map('split', '\n') | list }}"
       _dict: "{{ dict(_user|zip(_processes)) }}"
 
