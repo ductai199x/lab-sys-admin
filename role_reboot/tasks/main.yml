@@ -14,7 +14,7 @@
   failed_when: False
 
 - set_fact:
-      _user: "{{ result.keys() | list | difference(groups['lab_internal_web_host']) }}"
+      _user: "{{ result.keys() | list }}"
       _processes: "{{ result.values() | map('split', '\n') | list }}"
   vars:
       result: "{{ dict(processes.results | json_query('[?rc == `0`].[item, stdout]')) }}"
@@ -27,7 +27,6 @@
 - name: Reboot block
   block:
     - name: Reboot only machines that no one is running anything
-      hosts: labservers, !lab_internal_web_host
       become: yes
       reboot:
           msg: "Reboot initiated by Ansible"
@@ -36,4 +35,4 @@
           pre_reboot_delay: 0
           post_reboot_delay: 60
           test_command: uptime
-  when: user_process_dict.keys() | length == 0
+  when: (user_process_dict.keys() | length == 0) and (inventory_hostname not in groups['lab_internal_web_host'])
