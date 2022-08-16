@@ -23,15 +23,17 @@
 
 - debug: msg="{{ user_process_dict }}"
 
-- name: Reboot block
-  block:
-    - name: Reboot only machines that no one is running anything
-      become: yes
-      reboot:
-          msg: "Reboot initiated by Ansible"
-          connect_timeout: 5
-          reboot_timeout: 300
-          pre_reboot_delay: 0
-          post_reboot_delay: 60
-          test_command: uptime
-  when: user_process_dict.keys() | length == 0
+- debug: msg="{{ _user }}"
+
+# - name: Reboot block
+#   block:
+#     - name: Reboot only machines that no one is running anything
+#       become: yes
+#       reboot:
+#           msg: "Reboot initiated by Ansible"
+#           connect_timeout: 5
+#           reboot_timeout: 300
+#           pre_reboot_delay: 0
+#           post_reboot_delay: 60
+#           test_command: uptime
+#   when: user_process_dict.keys() | length == 0
