@@ -141,7 +141,7 @@ const LabStatus: NextPage = () => {
   const getGpuRunningProcesses = (host_name: string, gpu_idx: number, gpu_name: string) => {
     const gpu_proc_str = data[host_name][gpu_idx][gpu_name].gpu_processes;
     const gpu_proc_info_str = data[host_name][gpu_idx][gpu_name].gpu_process_info;
-    let processes: Array<any> = JSON.parse(gpu_proc_str.replaceAll("'", '"')).process_info;
+    let processes: Array<any> = [JSON.parse(gpu_proc_str.replaceAll("'", '"')).process_info].flat();
     let processes_info = JSON.parse(gpu_proc_info_str.replaceAll("'", '"'));
 
     let gpu_proc_list: GpuProc[] = [];
