@@ -5,6 +5,7 @@ default_apt_packages:
   - make
   - automake
   - vim
+  - neovim
   - git
   - gcc
   - g++
@@ -24,5 +25,6 @@ default_apt_packages:
   - libtiff-dev
   - libjpeg-dev
   - libcairo2-dev
+  - protobuf-compiler
 
 additional_apt_packages: []

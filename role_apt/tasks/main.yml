@@ -13,22 +13,24 @@
   apt:
       update_cache: yes
       upgrade: "safe"
-  retries: 3
-  delay: 5
+  retries: 5
+  delay: 10
   register: result
   until: result is success
 
 - name: Make sure apt packages are present
+  throttle: 2
   become: yes
   apt:
       name: "{{ default_apt_packages + additional_apt_packages }}"
       state: present
-  retries: 3
-  delay: 5
+  retries: 5
+  delay: 10
   register: result
   until: result is success
 
 - name: Make sure python3.9 ppa is present
+  throttle: 4
   become: yes
   apt_repository:
       repo: "ppa:deadsnakes/ppa"
@@ -39,6 +41,7 @@
   until: result is success
 
 - name: Make sure python3.9 and python3.9-distutils are present
+  throttle: 4
   become: yes
   apt:
       name:
@@ -52,6 +55,7 @@
   until: result is success
 
 - name: Make sure FFmpeg 5.x ppa:savoury1/ffmpeg4 is present
+  throttle: 2
   become: yes
   apt_repository:
       repo: "ppa:savoury1/ffmpeg4"
@@ -62,6 +66,7 @@
   until: result is success
 
 - name: Make sure FFmpeg 5.x ppa:savoury1/ffmpeg5 is present
+  throttle: 2
   become: yes
   apt_repository:
       repo: "ppa:savoury1/ffmpeg5"
@@ -72,6 +77,7 @@
   until: result is success
 
 - name: Make sure FFmpeg 5.x is present
+  throttle: 2
   become: yes
   apt:
       name:

@@ -9,5 +9,7 @@ default_pip_packages:
   - jmespath
   - black
   - rich
+  - virtualenv
+  - pandas
 
 additional_pip_packages: []
