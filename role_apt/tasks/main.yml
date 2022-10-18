@@ -12,7 +12,7 @@
   become: yes
   apt:
       update_cache: yes
-      upgrade: "safe"
+      upgrade: yes
   retries: 5
   delay: 10
   register: result

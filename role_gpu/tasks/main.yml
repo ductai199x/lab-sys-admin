@@ -211,8 +211,9 @@
   - name: Run `npm run start` to start the webpage at port 3000
     become: True
     shell:
-      cmd: nohup npm run start &
+      cmd: nohup npm run start & disown
       chdir: /internal_web
+      executable: /bin/bash
     delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
     run_once: True
   when: is_rebuild_webpage | bool == True
