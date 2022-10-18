@@ -6,6 +6,7 @@ is_reboot: False
 is_update_upgrade: False
 is_install_pip_packages: False
 is_get_gpu_info: False
+is_unattended_upgrade: False
 current_users:
     - tai
     - brian

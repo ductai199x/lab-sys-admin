@@ -14,7 +14,6 @@
       - name: Include the role_apt
         include_role:
             name: role_apt
-
         when: is_update_upgrade | bool == True
 
       - name: Grab current PATH environment variable
@@ -45,3 +44,8 @@
             name: role_gpu
         when: is_get_gpu_info | bool == True
 
+      - name: Include the role_unattended_upgrade
+        include_role:
+            name: role_unattended_upgrade
+        when: is_unattended_upgrade | bool == True
+      
