@@ -147,7 +147,7 @@
     dest: /internal_web
     owner: ansible
     group: ansible
-    mode: 0775
+    mode: 0777
   with_items:
     - "internal-web-page/pages"
     - "internal-web-page/public"
@@ -172,7 +172,10 @@
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
   run_once: True
 
-- debug: msg="{{ npm_run_start_pids }}"
+
+- name: Showing npm run start pids
+  debug: 
+    var: npm_run_start_pids
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
   run_once: True
 
@@ -200,6 +203,14 @@
     delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
     run_once: True
 
+  - name: Run `npm install` to install the `forever` package
+    become: True
+    shell:
+      cmd: npm install -S -E forever
+      chdir: /internal_web
+    delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+    run_once: True
+
   - name: Run `npm run build` to build the webpage up
     become: True
     shell:
@@ -211,7 +222,7 @@
   - name: Run `npm run start` to start the webpage at port 3000
     become: True
     shell:
-      cmd: nohup npm run start & disown
+      cmd: ./node_modules/forever/bin/forever start -c "npm run start" ./
       chdir: /internal_web
       executable: /bin/bash
     delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
