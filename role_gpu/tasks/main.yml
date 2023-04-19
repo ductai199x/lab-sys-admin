@@ -1,57 +1,57 @@
 ---
 # tasks file for role_gpu
 - name: Parse nvidia-smi output
-  shell:
-    cmd: nvidia-smi -x -q | xq ".nvidia_smi_log.gpu"
+  ansible.builtin.shell:
+    cmd: set -o pipefail && nvidia-smi -x -q | xq ".nvidia_smi_log.gpu"
   environment:
     PATH: "{{ env_path }}"
   args:
     executable: /bin/zsh
   register: nvidia_smi
-  changed_when: False
+  changed_when: false
 
 - name: Get Nvidia driver version
-  shell:
-    cmd: modinfo nvidia | grep -oP '(?<=^version:).*' | head -n1 | tr -d ' '
+  ansible.builtin.shell:
+    cmd: set -o pipefail && modinfo nvidia | grep -oP '(?<=^version:).*' | head -n1 | tr -d ' '
   environment:
     PATH: "{{ env_path }}"
   args:
     executable: /bin/zsh
   register: nvidia_driver
-  changed_when: False
+  changed_when: false
 
 - name: Get installed Cuda versions
-  shell:
-    cmd: dpkg -l | grep -oP '(?<=cuda-toolkit-)[0-9]+-[0-9]+' | uniq
+  ansible.builtin.shell:
+    cmd: set -o pipefail && dpkg -l | grep -oP '(?<=cuda-toolkit-)[0-9]+-[0-9]+' | uniq
   environment:
     PATH: "{{ env_path }}"
   args:
     executable: /bin/zsh
   register: cuda_versions
-  changed_when: False
+  changed_when: false
 
 - name: Get installed Cudnn versions
-  shell:
-    cmd: dpkg -l | grep -oP '(?<=cudnn[0-9])\ +[A-z0-9.\-\+]+' | tr -d ' ' | uniq
+  ansible.builtin.shell:
+    cmd: set -o pipefail && dpkg -l | grep -oP '(?<=cudnn[0-9])\ +[A-z0-9.\-\+]+' | tr -d ' ' | uniq
   environment:
     PATH: "{{ env_path }}"
   args:
     executable: /bin/zsh
   register: cudnn_versions
-  changed_when: False
+  changed_when: false
 
 - name: Set fact for nvidia-smi
-  set_fact:
+  ansible.builtin.set_fact:
     nvidia_smi: "{{ nvidia_smi.stdout | from_json }}"
 
 - name: Set fact for GPU info
-  set_fact:
-    gpu_type: "{{ [ nvidia_smi | json_query(gpu_type_query) ] | flatten }}"
-    gpu_mem_usage: "{{ [ nvidia_smi | json_query(gpu_mem_usage_query)] | flatten }}"
-    gpu_freq: "{{ [ nvidia_smi | json_query(gpu_freq_query) ] | flatten }}"
-    gpu_temp: "{{ [ nvidia_smi | json_query(gpu_temp_query) ] | flatten }}"
-    gpu_util: "{{ [ nvidia_smi | json_query(gpu_util_query) ] | flatten }}"
-    gpu_processes: "{{ [ nvidia_smi | json_query(gpu_processes_query) ] | flatten | list }}"
+  ansible.builtin.set_fact:
+    gpu_type: "{{ [nvidia_smi | json_query(gpu_type_query)] | flatten }}"
+    gpu_mem_usage: "{{ [nvidia_smi | json_query(gpu_mem_usage_query)] | flatten }}"
+    gpu_freq: "{{ [nvidia_smi | json_query(gpu_freq_query)] | flatten }}"
+    gpu_temp: "{{ [nvidia_smi | json_query(gpu_temp_query)] | flatten }}"
+    gpu_util: "{{ [nvidia_smi | json_query(gpu_util_query)] | flatten }}"
+    gpu_processes: "{{ [nvidia_smi | json_query(gpu_processes_query)] | flatten | list }}"
     nvidia_driver: "{{ nvidia_driver.stdout }}"
     cuda_versions: "{{ cuda_versions.stdout | replace('-', '.') | split('\n') }}"
     cudnn_versions: "{{ cudnn_versions.stdout | replace('-', '.') | split('\n') }}"
@@ -64,10 +64,12 @@
     gpu_util_query: "utilization || [*].utilization"
     gpu_processes_query: "processes || [*].processes"
 
-- set_fact:
+- name: Set facts
+  ansible.builtin.set_fact:
     gpu_proc_ids: "{{ gpu_processes | json_query('[*].process_info[*].pid || [*].process_info.pid') }}"
 
-- debug:
+- name: Print info
+  ansible.builtin.debug:
     var: gpu_proc_ids
 
 # https://man7.org/linux/man-pages/man1/ps.1.html
@@ -94,7 +96,7 @@
 #   %z     vsz      VSZ
 
 - name: Grab processes' information from process ids
-  shell:
+  ansible.builtin.shell:
     cmd: ps --no-headers -p "{{ item }}" -o "%U," -o lstart -o ",%t,%a"
   environment:
     PATH: "{{ env_path }}"
@@ -102,10 +104,11 @@
     executable: /bin/zsh
   with_items: "{{ gpu_proc_ids }}"
   register: process_info
-  changed_when: False
-  failed_when: False
+  changed_when: false
+  failed_when: false
 
-- set_fact:
+- name: Set facts
+  ansible.builtin.set_fact:
     process_info_dict: "{{ _dict }}"
   vars:
     _result: "{{ dict(process_info.results | json_query('[?rc == `0`].[item, stdout]')) }}"
@@ -114,40 +117,42 @@
     _dict: "{{ dict(_proc_id|zip(_proc_info)) }}"
 
 - name: Output Lab Machine Statuses html file
-  template:
+  ansible.builtin.template:
     src: lab_machine_status.html.j2
     dest: lab_machine_status.html
+    mode: "0664"
   delegate_to: localhost
-  run_once: True
-  changed_when: False
+  run_once: true
+  changed_when: false
 
 - name: Output Lab Machine Statuses yml file
-  template:
+  ansible.builtin.template:
     src: lab_machine_status.yml.j2
     dest: internal-web-page/public/lab_machine_status.yml
+    mode: "0664"
   delegate_to: localhost
-  run_once: True
-  changed_when: False
+  run_once: true
+  changed_when: false
 
 - name: Create directory to store the internal web page
-  become: True
-  file:
+  become: true
+  ansible.builtin.file:
     path: /internal_web
     owner: ansible
     group: ansible
-    mode: 0777
+    mode: "0777"
     state: directory
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-  run_once: True
+  run_once: true
 
 - name: Copy the files over to the internal web page
-  become: True
-  copy:
+  become: true
+  ansible.builtin.copy:
     src: "{{ item }}"
     dest: /internal_web
     owner: ansible
     group: ansible
-    mode: 0777
+    mode: "0777"
   with_items:
     - "internal-web-page/pages"
     - "internal-web-page/public"
@@ -156,75 +161,79 @@
     - "internal-web-page/.gitignore"
     - "internal-web-page/next-env.d.ts"
     - "internal-web-page/next.config.js"
-    - "internal-web-page/package-lock.json"
     - "internal-web-page/package.json"
     - "internal-web-page/README.md"
     - "internal-web-page/tsconfig.json"
-    - "internal-web-page/yarn.lock"
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-  run_once: True
+  run_once: true
 
 - name: Get previous `npm run start` process if it's running
-  become: True
-  pids:
+  become: true
+  community.general.pids:
     pattern: (node|npm)\s+(.*)\s+start.*
   register: npm_run_start_pids
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-  run_once: True
+  run_once: true
 
 
 - name: Showing npm run start pids
-  debug: 
+  ansible.builtin.debug:
     var: npm_run_start_pids
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-  run_once: True
+  run_once: true
 
-- set_fact:
-    is_rebuild_webpage: "{{ is_rebuild_webpage | default(False) }}"
+- name: Set facts
+  ansible.builtin.set_fact:
+    is_rebuild_webpage: "{{ (npm_run_start_pids.pids | length) == 0 }}"
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-  run_once: True
+  run_once: true
 
 - name: Rebuild webpage
   block:
-  - name: End these process before building and starting it back up
-    become: True
-    shell:
-      cmd: kill {{ item }}
-    with_items: "{{ npm_run_start_pids.pids }}"
-    delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-    run_once: True
-    failed_when: False
+    - name: End these process before building and starting it back up
+      become: true
+      ansible.builtin.command:
+        cmd: kill {{ item }}
+      with_items: "{{ npm_run_start_pids.pids }}"
+      delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+      run_once: true
+      failed_when: false
+      changed_when: false
 
-  - name: Run `npm install` to install the node_modules in package.json
-    become: True
-    shell:
-      cmd: npm install -S -E
-      chdir: /internal_web
-    delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-    run_once: True
+    - name: Run `npm install` to install the node_modules in package.json
+      become: true
+      ansible.builtin.command:
+        cmd: npm install -S -E
+        chdir: /internal_web
+      delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+      run_once: true
+      changed_when: true
 
-  - name: Run `npm install` to install the `forever` package
-    become: True
-    shell:
-      cmd: npm install -S -E forever
-      chdir: /internal_web
-    delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-    run_once: True
+    - name: Run `npm install` to install the `forever` package
+      become: true
+      ansible.builtin.command:
+        cmd: npm install -S -E forever
+        chdir: /internal_web
+      delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+      run_once: true
+      changed_when: true
 
-  - name: Run `npm run build` to build the webpage up
-    become: True
-    shell:
-      cmd: npm run build
-      chdir: /internal_web
-    delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-    run_once: True
+    - name: Run `npm run build` to build the webpage up
+      become: true
+      ansible.builtin.command:
+        cmd: npm run build
+        chdir: /internal_web
+      delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+      run_once: true
+      changed_when: true
 
-  - name: Run `npm run start` to start the webpage at port 3000
-    become: True
-    shell:
-      cmd: ./node_modules/forever/bin/forever start -c "npm run start" ./
-      chdir: /internal_web
-      executable: /bin/bash
-    delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-    run_once: True
-  when: is_rebuild_webpage | bool == True
+    - name: Run `npm run start` to start the webpage at port 3000
+      become: true
+      ansible.builtin.shell:
+        cmd: ./node_modules/forever/bin/forever start -c "npm run start" ./
+        chdir: /internal_web
+        executable: /bin/bash
+      delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+      run_once: true
+      changed_when: true
+  when: is_rebuild_webpage | bool == true
