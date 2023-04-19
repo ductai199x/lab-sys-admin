@@ -9,3 +9,5 @@ pyvenv.cfg
 lab_machine_status.yml
 lab_machine_status.html
 secret_key
+
+*log_dump*

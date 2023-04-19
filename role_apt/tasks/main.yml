@@ -2,17 +2,17 @@
 # tasks file for role_apt
 
 - name: Fix-broken installs in-case something need to be fixed before update upgrade
-  become: True
-  shell:
-    cmd: echo "Y" | sudo apt --fix-broken install
-  changed_when: False
-  failed_when: False
+  become: true
+  ansible.builtin.shell:
+    cmd: set -o pipefail && echo "Y" | sudo apt --fix-broken install
+  changed_when: false
+  failed_when: false
 
 - name: Apt-get update and upgrade
-  become: yes
-  apt:
-      update_cache: yes
-      upgrade: yes
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: true
   retries: 5
   delay: 10
   register: result
@@ -20,10 +20,10 @@
 
 - name: Make sure apt packages are present
   throttle: 2
-  become: yes
-  apt:
-      name: "{{ default_apt_packages + additional_apt_packages }}"
-      state: present
+  become: true
+  ansible.builtin.apt:
+    name: "{{ default_apt_packages + additional_apt_packages }}"
+    state: present
   retries: 5
   delay: 10
   register: result
@@ -31,10 +31,10 @@
 
 - name: Make sure python3.9 ppa is present
   throttle: 4
-  become: yes
-  apt_repository:
-      repo: "ppa:deadsnakes/ppa"
-      state: present
+  become: true
+  ansible.builtin.apt_repository:
+    repo: "ppa:deadsnakes/ppa"
+    state: present
   retries: 3
   delay: 5
   register: result
@@ -42,13 +42,13 @@
 
 - name: Make sure python3.9 and python3.9-distutils are present
   throttle: 4
-  become: yes
-  apt:
-      name:
-          - python3.9
-          - python3.9-dev
-          - python3.9-distutils
-      state: latest
+  become: true
+  ansible.builtin.apt:
+    name:
+      - python3.9
+      - python3.9-dev
+      - python3.9-distutils
+    state: present
   retries: 3
   delay: 5
   register: result
@@ -56,33 +56,35 @@
 
 - name: Make sure FFmpeg 5.x ppa:savoury1/ffmpeg4 is present
   throttle: 2
-  become: yes
-  apt_repository:
-      repo: "ppa:savoury1/ffmpeg4"
-      state: present
+  become: true
+  ansible.builtin.apt_repository:
+    repo: "ppa:savoury1/ffmpeg4"
+    state: present
   retries: 3
   delay: 5
   register: result
   until: result is success
+  when: (ansible_distribution + ansible_distribution_version) != "Ubuntu22.04"
 
 - name: Make sure FFmpeg 5.x ppa:savoury1/ffmpeg5 is present
   throttle: 2
-  become: yes
-  apt_repository:
-      repo: "ppa:savoury1/ffmpeg5"
-      state: present
+  become: true
+  ansible.builtin.apt_repository:
+    repo: "ppa:savoury1/ffmpeg5"
+    state: present
   retries: 3
   delay: 5
   register: result
   until: result is success
+  when: (ansible_distribution + ansible_distribution_version) != "Ubuntu22.04"
 
 - name: Make sure FFmpeg 5.x is present
   throttle: 2
-  become: yes
-  apt:
-      name:
-          - ffmpeg
-      state: latest
+  become: true
+  ansible.builtin.apt:
+    name:
+      - ffmpeg
+    state: present
   retries: 3
   delay: 5
   register: result

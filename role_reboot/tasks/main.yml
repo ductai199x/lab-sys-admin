@@ -21,8 +21,13 @@
 
 - set_fact:
       user_process_dict: "{{ dict(_user|zip(_processes)) }}"
+      relevant_processes_flatten: "{{ _processes | flatten | reject('match', '^(.*)(sshd|systemd|sd-pam|gvfs|goa-|pipewire|pulseaudio|dbus-daemon|gnome|tracker-miner)(.*)$') | list }}"
 
 - debug: msg="{{ user_process_dict }}"
+
+- debug: msg="{{ relevant_processes_flatten }}"
+
+- debug: msg="{{ relevant_processes_flatten | length }}"
 
 - name: Reboot block
   block:
@@ -31,8 +36,16 @@
       reboot:
           msg: "Reboot initiated by Ansible"
           connect_timeout: 5
-          reboot_timeout: 300
+          reboot_timeout: 360
           pre_reboot_delay: 0
           post_reboot_delay: 60
           test_command: uptime
-  when: (user_process_dict.keys() | length == 0) and (inventory_hostname not in groups['lab_internal_web_host'])
+
+    - name: Mount all available drives in fstab
+      become: yes
+      shell:
+        cmd: sudo mount -a
+
+  when: (relevant_processes_flatten | length == 0) and (inventory_hostname not in groups['lab_internal_web_host'])
+
+
