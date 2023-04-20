@@ -159,6 +159,7 @@
     - "internal-web-page/styles"
     - "internal-web-page/.eslintrc.json"
     - "internal-web-page/.gitignore"
+    - "internal-web-page/.babelrc"
     - "internal-web-page/next-env.d.ts"
     - "internal-web-page/next.config.js"
     - "internal-web-page/package.json"
@@ -204,15 +205,6 @@
       become: true
       ansible.builtin.command:
         cmd: npm install -S -E
-        chdir: /internal_web
-      delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-      run_once: true
-      changed_when: true
-
-    - name: Run `npm install` to install the `forever` package
-      become: true
-      ansible.builtin.command:
-        cmd: npm install -S -E forever
         chdir: /internal_web
       delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
       run_once: true

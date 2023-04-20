@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Button, Card, Collapse, Intent, Text } from "@blueprintjs/core";
 import type { NextPage } from "next";
 import styles from "../styles/LabStatus.module.css";
+import preval from 'babel-plugin-preval/macro';
 
 interface GpuStats {
   [name: string]: {
@@ -100,6 +101,8 @@ const useEscape = (onEscape: any, onEscapeParams: any) => {
     };
   }, []);
 };
+
+const compiled_datetime = preval`module.exports = new Date().toLocaleString();`
 
 const LabStatus: NextPage = () => {
   const [data, setData] = useState<AllGpuStats>();
@@ -226,7 +229,7 @@ const LabStatus: NextPage = () => {
         </Collapse>
       </div>
 
-      <h1>Lab Machine Statuses</h1>
+      <h1>Lab Machine Statuses (Updated: {compiled_datetime})</h1>
 
       <table className={`${styles["lab-status-table"]} bp4-html-table bp4-interactive`}>
         <thead>
