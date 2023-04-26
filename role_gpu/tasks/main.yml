@@ -176,73 +176,56 @@
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
   run_once: true
 
-- name: Get process running on port 3000
-  become: true
-  ansible.builtin.shell:
-    cmd: set -o pipefail && sudo netstat -nlp | grep :3000 | awk '{ print $7 }' | awk -F'/' '{ print $1 }'
-  environment:
-    PATH: "{{ env_path }}"
-  args:
-    executable: /bin/zsh
-  register: npm_process_id
-  delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-  run_once: true
-  changed_when: false
-  failed_when: false
 
-- name: End these process before building and starting it back up
-  become: true
-  ansible.builtin.command:
-    cmd: kill {{ item }}
-  with_items: "{{ npm_run_start_pids.pids }}"
+- name: Showing npm run start pids
+  ansible.builtin.debug:
+    var: npm_run_start_pids
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
   run_once: true
-  failed_when: false
-  changed_when: false
 
-- name: End these process before building and starting it back up
-  become: true
-  ansible.builtin.command:
-    cmd: kill {{ npm_process_id.stdout }}
+- name: Set facts
+  ansible.builtin.set_fact:
+    is_rebuild_webpage: "{{ (npm_run_start_pids.pids | length) == 0 }}"
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
   run_once: true
-  failed_when: false
-  changed_when: false
-  when: npm_process_id.stdout != ''
 
-- name: Remove current .next folder
-  become: true
-  ansible.builtin.command:
-    cmd: rm -rf .next
-    chdir: /internal_web
-  delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-  run_once: true
-  changed_when: true
+- name: Rebuild webpage
+  block:
+    - name: End these process before building and starting it back up
+      become: true
+      ansible.builtin.command:
+        cmd: kill {{ item }}
+      with_items: "{{ npm_run_start_pids.pids }}"
+      delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+      run_once: true
+      failed_when: false
+      changed_when: false
 
-- name: Run `npm install` to install the node_modules in package.json
-  become: true
-  ansible.builtin.command:
-    cmd: npm install -S -E
-    chdir: /internal_web
-  delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-  run_once: true
-  changed_when: true
+    - name: Run `npm install` to install the node_modules in package.json
+      become: true
+      ansible.builtin.command:
+        cmd: npm install -S -E
+        chdir: /internal_web
+      delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+      run_once: true
+      changed_when: true
 
-- name: Run `npm run build` to build the webpage up
-  become: true
-  ansible.builtin.command:
-    cmd: npm run build
-    chdir: /internal_web
-  delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-  run_once: true
-  changed_when: true
+    - name: Run `npm run build` to build the webpage up
+      become: true
+      ansible.builtin.command:
+        cmd: npm run build
+        chdir: /internal_web
+      delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+      run_once: true
+      changed_when: true
 
-- name: Run `npm run start` to start the webpage at port 3000
-  become: true
-  ansible.builtin.shell:
-    cmd: ./node_modules/forever/bin/forever start -c "npm run start" ./
-    chdir: /internal_web
-    executable: /bin/bash
-  delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-  run_once: true
-  changed_when: true
+    - name: Run `npm run start` to start the webpage at port 3000
+      become: true
+      ansible.builtin.shell:
+        cmd: ./node_modules/forever/bin/forever start -c "npm run start" ./
+        chdir: /internal_web
+        executable: /bin/bash
+      delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
+      run_once: true
+      changed_when: true
+  when: is_rebuild_webpage | bool == true
