@@ -31,7 +31,10 @@ interface GpuStats {
 }
 
 interface AllGpuStats {
-  [name: string]: GpuStats[];
+  build_datetime: string;
+  server_gpu_info: {
+    [name: string]: GpuStats[];
+  };
 }
 
 interface GpuProc {
@@ -139,8 +142,8 @@ const LabStatus: NextPage = () => {
   };
 
   const getGpuRunningProcesses = (host_name: string, gpu_idx: number, gpu_name: string) => {
-    const gpu_proc_str = data[host_name][gpu_idx][gpu_name].gpu_processes;
-    const gpu_proc_info_str = data[host_name][gpu_idx][gpu_name].gpu_process_info;
+    const gpu_proc_str = data.server_gpu_info[host_name][gpu_idx][gpu_name].gpu_processes;
+    const gpu_proc_info_str = data.server_gpu_info[host_name][gpu_idx][gpu_name].gpu_process_info;
     let processes: Array<any> = [JSON.parse(gpu_proc_str.replaceAll("'", '"')).process_info].flat();
     let processes_info = JSON.parse(gpu_proc_info_str.replaceAll("'", '"'));
 
@@ -226,7 +229,7 @@ const LabStatus: NextPage = () => {
         </Collapse>
       </div>
 
-      <h1>Lab Machine Statuses</h1>
+      <h1>Lab Machine Statuses (Last Updated: {data.build_datetime})</h1>
 
       <table className={`${styles["lab-status-table"]} bp4-html-table bp4-interactive`}>
         <thead>
@@ -254,15 +257,15 @@ const LabStatus: NextPage = () => {
           </tr>
         </thead>
         <tbody>
-          {Object.keys(data).map((host_name) =>
-            data[host_name].map((host_obj, gpu_idx) =>
+          {Object.keys(data.server_gpu_info).map((host_name) =>
+            data.server_gpu_info[host_name].map((host_obj, gpu_idx) =>
               Object.keys(host_obj).map((gpu_name) => (
                 <tr
                   key="`${host_name}_${gpu_name}`"
                   className={styles[isGpuAvailable(gpu_name, host_obj[gpu_name].gpu_mem_usage.used)]}
                   onClick={(e) => getGpuRunningProcesses(host_name, gpu_idx, gpu_name)}
                 >
-                  {gpu_idx == 0 ? <th rowSpan={data[host_name].length}>{host_name}</th> : null}
+                  {gpu_idx == 0 ? <th rowSpan={data.server_gpu_info[host_name].length}>{host_name}</th> : null}
                   <td>{gpu_name}</td>
                   <td>{host_obj[gpu_name].gpu_mem_usage.total}</td>
                   <td>{host_obj[gpu_name].gpu_mem_usage.used}</td>

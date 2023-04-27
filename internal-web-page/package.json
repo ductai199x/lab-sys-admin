@@ -1,6 +1,6 @@
 {
-  "name": "4-learn-nextjs",
-  "version": "0.1.0",
+  "name": "lab-sys-admin-webpage",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,6 +11,7 @@
   "dependencies": {
     "@blueprintjs/core": "^4.5.0",
     "@blueprintjs/table": "^4.3.0",
+    "forever": "^4.0.3",
     "next": "12.1.6",
     "react": "^18.1.0",
     "react-dom": "18.1.0",

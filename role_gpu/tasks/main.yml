@@ -116,6 +116,13 @@
     _proc_info: "{{ _result.values() | map('regex_replace', '\"', '') | list }}"
     _dict: "{{ dict(_proc_id|zip(_proc_info)) }}"
 
+- name: Get the current date and time with timezone
+  ansible.builtin.command: "date '+%Y-%m-%d %H:%M:%S %z'"
+  register: current_datetime
+  delegate_to: localhost
+  run_once: true
+  changed_when: false
+
 - name: Output Lab Machine Statuses html file
   ansible.builtin.template:
     src: lab_machine_status.html.j2
@@ -188,7 +195,7 @@
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
   run_once: true
 
-- name: Rebuild webpage
+- name: Rebuild webpage # noqa: key-order[task] literal-compare
   block:
     - name: End these process before building and starting it back up
       become: true
@@ -201,34 +208,25 @@
       changed_when: false
 
     - name: Run `npm install` to install the node_modules in package.json
-      become: true
       ansible.builtin.command:
-        cmd: npm install -S -E
-        chdir: /internal_web
-      delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-      run_once: true
-      changed_when: true
-
-    - name: Run `npm install` to install the `forever` package
-      become: true
-      ansible.builtin.command:
-        cmd: npm install -S -E forever
+        cmd: npm install
         chdir: /internal_web
       delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
       run_once: true
       changed_when: true
 
     - name: Run `npm run build` to build the webpage up
-      become: true
-      ansible.builtin.command:
+      ansible.builtin.shell:
         cmd: npm run build
         chdir: /internal_web
+        executable: /bin/bash
       delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
       run_once: true
       changed_when: true
+      async: 60
+      poll: 5
 
-    - name: Run `npm run start` to start the webpage at port 3000
-      become: true
+    - name: Start the webpage at port 3000 using `forever`
       ansible.builtin.shell:
         cmd: ./node_modules/forever/bin/forever start -c "npm run start" ./
         chdir: /internal_web
