@@ -147,7 +147,7 @@
     path: /internal_web
     owner: ansible
     group: ansible
-    mode: "0777"
+    mode: "0755"
     state: directory
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
   run_once: true
@@ -159,7 +159,7 @@
     dest: /internal_web
     owner: ansible
     group: ansible
-    mode: "0777"
+    mode: "0755"
   with_items:
     - "internal-web-page/pages"
     - "internal-web-page/public"
@@ -208,6 +208,7 @@
       changed_when: false
 
     - name: Run `npm install` to install the node_modules in package.json
+      become: true
       ansible.builtin.command:
         cmd: npm install
         chdir: /internal_web
@@ -216,10 +217,10 @@
       changed_when: true
 
     - name: Run `npm run build` to build the webpage up
-      ansible.builtin.shell:
-        cmd: npm run build
+      become: true
+      ansible.builtin.command:
+        cmd: ./node_modules/next/dist/bin/next build
         chdir: /internal_web
-        executable: /bin/bash
       delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
       run_once: true
       changed_when: true
