@@ -182,16 +182,9 @@
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
   run_once: true
 
-
 - name: Showing npm run start pids
   ansible.builtin.debug:
     var: npm_run_start_pids
-  delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
-  run_once: true
-
-- name: Set facts
-  ansible.builtin.set_fact:
-    is_rebuild_webpage: "{{ (npm_run_start_pids.pids | length) == 0 }}"
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
   run_once: true
 
@@ -209,28 +202,26 @@
 
     - name: Run `npm install` to install the node_modules in package.json
       become: true
-      ansible.builtin.command:
-        cmd: npm install
-        chdir: /internal_web
+      ansible.builtin.shell:
+        cmd: "cd /internal_web && npm install"
       delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
       run_once: true
       changed_when: true
 
-    - name: Run `npm run build` to build the webpage up
+    - name: Run `next build` to build the webpage up
       become: true
-      ansible.builtin.command:
-        cmd: ./node_modules/next/dist/bin/next build
-        chdir: /internal_web
+      ansible.builtin.shell:
+        cmd: "cd /internal_web && ./node_modules/next/dist/bin/next build"
       delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
       run_once: true
       changed_when: true
-      async: 60
-      poll: 5
+      # async: 60
+      # poll: 5
 
     - name: Start the webpage at port 3000 using `forever`
+      become: true
       ansible.builtin.shell:
-        cmd: ./node_modules/forever/bin/forever start -c "npm run start" ./
-        chdir: /internal_web
+        cmd: "cd /internal_web && ./node_modules/forever/bin/forever start -c 'npm run start' ./"
         executable: /bin/bash
       delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
       run_once: true
