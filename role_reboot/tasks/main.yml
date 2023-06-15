@@ -1,51 +1,58 @@
 ---
 # tasks file for role_reboot
 - name: Get processes for each current_users
-  become: yes
-  shell:
-      cmd: ps --no-headers -U "{{ item }}" -u "{{ item }}"
+  become: true
+  ansible.builtin.shell:
+    cmd: ps --no-headers -U "{{ item }}" -u "{{ item }}"
   environment:
-      PATH: "{{ env_path }}"
+    PATH: "{{ env_path }}"
   args:
-      executable: /bin/zsh
+    executable: /bin/zsh
   with_items: "{{ current_users }}"
   register: processes
-  changed_when: False
-  failed_when: False
+  changed_when: false
+  failed_when: false
 
-- set_fact:
-      _user: "{{ result.keys() | list }}"
-      _processes: "{{ result.values() | map('split', '\n') | list }}"
+- name: Set fact building user to process mapping # noqa: jinja[invalid]
+  ansible.builtin.set_fact:
+    _user: "{{ result.keys() | list }}"
+    _processes: "{{ result.values() | map('split', '\n') | list }}"
   vars:
-      result: "{{ dict(processes.results | json_query('[?rc == `0`].[item, stdout]')) }}"
+    result: "{{ dict(processes.results | json_query('[?rc == `0`].[item, stdout]')) }}"
 
-- set_fact:
-      user_process_dict: "{{ dict(_user|zip(_processes)) }}"
-      relevant_processes_flatten: "{{ _processes | flatten | reject('match', '^(.*)(sshd|systemd|sd-pam|gvfs|goa-|pipewire|pulseaudio|dbus-daemon|gnome|tracker-miner)(.*)$') | list }}"
+- name: Set fact for relevant processes only
+  ansible.builtin.set_fact:
+    user_process_dict: "{{ dict(_user | zip(_processes)) }}"
+    relevant_processes_flatten: "{{ _processes | flatten | reject('match', '^(.*)(sshd|systemd|sd-pam|gvfs|goa-|pipewire|pulseaudio|dbus-daemon|gnome|tracker-miner)(.*)$') | list }}"
 
-- debug: msg="{{ user_process_dict }}"
+# - ansible.builtin.debug: msg="{{ user_process_dict }}"
 
-- debug: msg="{{ relevant_processes_flatten }}"
+# - ansible.builtin.debug: msg="{{ relevant_processes_flatten }}"
 
-- debug: msg="{{ relevant_processes_flatten | length }}"
+# - ansible.builtin.debug: msg="{{ relevant_processes_flatten | length }}"
 
 - name: Reboot block
+  when: (relevant_processes_flatten | length == 0) and (inventory_hostname not in groups['lab_internal_web_host'])
   block:
     - name: Reboot only machines that no one is running anything
-      become: yes
-      reboot:
-          msg: "Reboot initiated by Ansible"
-          connect_timeout: 5
-          reboot_timeout: 360
-          pre_reboot_delay: 0
-          post_reboot_delay: 60
-          test_command: uptime
+      become: true
+      ansible.builtin.reboot:
+        msg: "Reboot initiated by Ansible"
+        connect_timeout: 5
+        reboot_timeout: 360
+        pre_reboot_delay: 0
+        post_reboot_delay: 60
+        test_command: uptime
+
+    - name: Make sure mount point exists
+      become: true
+      ansible.builtin.file:
+        path: /media/nas2
+        state: directory
+        mode: "0777"
 
     - name: Mount all available drives in fstab
-      become: yes
-      shell:
+      become: true
+      ansible.builtin.command:
         cmd: sudo mount -a
-
-  when: (relevant_processes_flatten | length == 0) and (inventory_hostname not in groups['lab_internal_web_host'])
-
-
+      changed_when: false

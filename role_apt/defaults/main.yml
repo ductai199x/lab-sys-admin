@@ -18,5 +18,6 @@ default_apt_packages:
   - libtiff-dev
   - libjpeg-dev
   - libcairo2-dev
+  - nfs-common
 
 additional_apt_packages: []
