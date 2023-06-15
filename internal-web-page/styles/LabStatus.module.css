@@ -20,6 +20,8 @@ table.lab-status-table, table.proc-info-wrapper-table {
 .proc-info-wrapper-table th {
   border: 1px solid rgb(190,190,190);
   padding: 10px 20px;
+  max-width: 20vw;
+  overflow-x: clip;
 }
 
 .lab-status-table th, .proc-info-wrapper-table th {

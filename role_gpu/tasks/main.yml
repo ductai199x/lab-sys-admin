@@ -141,10 +141,13 @@
   run_once: true
   changed_when: false
 
+- name: Set internal webpage variable
+  ansible.builtin.set_fact:
+    internal_webpage_dir: "/home/ansible/internal_web"
+
 - name: Create directory to store the internal web page
-  become: true
   ansible.builtin.file:
-    path: /internal_web
+    path: "{{ internal_webpage_dir }}"
     owner: ansible
     group: ansible
     mode: "0755"
@@ -153,10 +156,9 @@
   run_once: true
 
 - name: Copy the files over to the internal web page
-  become: true
   ansible.builtin.copy:
     src: "{{ item }}"
-    dest: /internal_web
+    dest: "{{ internal_webpage_dir }}"
     owner: ansible
     group: ansible
     mode: "0755"
@@ -177,7 +179,7 @@
 - name: Get previous `npm run start` process if it's running
   become: true
   community.general.pids:
-    pattern: (node|npm)\s+(.*)\s+start.*
+    pattern: (node|npm|forever)\s+(.*)\s+start.*
   register: npm_run_start_pids
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
   run_once: true
@@ -188,7 +190,8 @@
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
   run_once: true
 
-- name: Rebuild webpage # noqa: key-order[task] literal-compare
+- name: Rebuild webpage
+  when: is_rebuild_webpage | bool
   block:
     - name: End these process before building and starting it back up
       become: true
@@ -201,29 +204,25 @@
       changed_when: false
 
     - name: Run `npm install` to install the node_modules in package.json
-      become: true
       ansible.builtin.shell:
-        cmd: "cd /internal_web && npm install"
+        cmd: "cd {{ internal_webpage_dir }} && npm install"
       delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
       run_once: true
       changed_when: true
 
     - name: Run `next build` to build the webpage up
-      become: true
       ansible.builtin.shell:
-        cmd: "cd /internal_web && ./node_modules/next/dist/bin/next build"
+        cmd: "cd {{ internal_webpage_dir }} && ./node_modules/next/dist/bin/next build"
       delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
       run_once: true
       changed_when: true
       # async: 60
       # poll: 5
 
-    - name: Start the webpage at port 3000 using `forever`
-      become: true
+    - name: Start the webpage at port 3939 using `forever`
       ansible.builtin.shell:
-        cmd: "cd /internal_web && ./node_modules/forever/bin/forever start -c 'npm run start' ./"
+        cmd: "cd {{ internal_webpage_dir }} && ./node_modules/forever/bin/forever start -c 'npm run start' ./"
         executable: /bin/bash
       delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
       run_once: true
       changed_when: true
-  when: is_rebuild_webpage | bool == true

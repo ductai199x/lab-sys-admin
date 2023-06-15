@@ -1,3 +1,7 @@
 [submodule "role_unattended_upgrade"]
 	path = role_unattended_upgrade
 	url = git@github.com:ductai199x/ansible-role-unattended-upgrades.git
+
+[submodule "role_oh_my_zsh"]
+	path = role_oh_my_zsh
+	url = git@github.com:ductai199x/ansible-role-oh-my-zsh.git

@@ -3,49 +3,49 @@
 - name: Main playbook for managing all servers
   hosts: "{{ target_hosts | default('labservers') }}"
   vars_files:
-      - vars/main.yml
-      - vars/secrets.yml
+    - vars/main.yml
+    - vars/secrets.yml
 
   tasks:
-      - set_fact:
-            unreachable_hosts: "{{ ansible_play_hosts_all|difference(ansible_play_hosts) }}"
-            cacheable: "yes"
+    - name: Set fact for unreachable_hosts
+      ansible.builtin.set_fact:
+        unreachable_hosts: "{{ ansible_play_hosts_all | difference(ansible_play_hosts) }}"
+        cacheable: "yes"
 
-      - name: Include the role_apt
-        include_role:
-            name: role_apt
-        when: is_update_upgrade | bool == True
+    - name: Include the role_apt
+      ansible.builtin.include_role:
+        name: role_apt
+      when: is_update_upgrade | bool
 
-      - name: Grab current PATH environment variable
-        shell:
-            cmd: echo $PATH
-        args:
-            executable: /bin/zsh
-        register: env_path
-        changed_when: False
+    - name: Grab current PATH environment variable
+      ansible.builtin.shell:
+        cmd: source .zshrc && echo $PATH
+      args:
+        executable: /usr/bin/zsh
+      register: env_path
+      changed_when: false
 
-      - name: Set fact for env_path
-        set_fact:
-            env_path: "/home/tai/.local/bin:{{ env_path.stdout }}"
-            cacheable: "yes"
+    - name: Set fact for env_path
+      ansible.builtin.set_fact:
+        env_path: "{{ env_path.stdout }}"
+        cacheable: "yes"
 
-      - name: Include the role_reboot
-        include_role:
-            name: role_reboot
-        when: is_reboot | bool == True
+    - name: Include the role_reboot
+      ansible.builtin.include_role:
+        name: role_reboot
+      when: is_reboot | bool
 
-      - name: Include the role_pip
-        include_role:
-            name: role_pip
-        when: is_install_pip_packages | bool == True
+    - name: Include the role_pip
+      ansible.builtin.include_role:
+        name: role_pip
+      when: is_install_pip_packages | bool
 
-      - name: Include the role_gpu
-        include_role:
-            name: role_gpu
-        when: is_get_gpu_info | bool == True
+    - name: Include the role_gpu
+      ansible.builtin.include_role:
+        name: role_gpu
+      when: is_get_gpu_info | bool
 
-      - name: Include the role_unattended_upgrade
-        include_role:
-            name: role_unattended_upgrade
-        when: is_unattended_upgrade | bool == True
-      
+    - name: Include the role_unattended_upgrade
+      ansible.builtin.include_role:
+        name: role_unattended_upgrade
+      when: is_unattended_upgrade | bool

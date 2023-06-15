@@ -6,7 +6,5 @@
     },
     "prettier.printWidth": 110,
     "editor.tabSize": 2,
-    "ansible.ansible.path": "/home/ansible/lab-sys-admin/bin/ansible",
-    "ansible.python.interpreterPath": "/home/ansible/lab-sys-admin/bin/python",
-    "ansible.validation.lint.path": "/home/ansible/lab-sys-admin/bin/ansible-lint",
+    "ansible.python.interpreterPath": "/usr/bin/python3.9",
 }

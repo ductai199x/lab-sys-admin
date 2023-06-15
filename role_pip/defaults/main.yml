@@ -11,5 +11,6 @@ default_pip_packages:
   - rich
   - virtualenv
   - pandas
+  - magic-wormhole
 
 additional_pip_packages: []

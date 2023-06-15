@@ -2,16 +2,15 @@ user_choice: "admin"
 ansible_ssh_user: "{{ _admin_username if user_choice == 'admin' else _ansbl_username }}"
 ansible_ssh_pass: "{{ _admin_password if user_choice == 'admin' else _ansbl_password }}"
 ansible_become_password: "{{ _admin_password if user_choice == 'admin' else _ansbl_password }}"
-is_reboot: False
-is_update_upgrade: False
-is_install_pip_packages: False
-is_get_gpu_info: False
-is_unattended_upgrade: False
+ansible_python_interpreter: "/usr/bin/python3"
+is_reboot: false
+is_update_upgrade: false
+is_install_pip_packages: false
+is_get_gpu_info: false
+is_unattended_upgrade: false
 current_users:
-    - tai
-    - brian
-    - owen
-    - shengbang
-    - xinwei
-    - danial
-    - misl-admin
+  - tai
+  - shengbang
+  - danial
+  - aref
+  - misl-admin

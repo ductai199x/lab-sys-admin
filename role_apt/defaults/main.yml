@@ -1,6 +1,7 @@
 ---
 # defaults file for role_apt
 default_apt_packages:
+  - build-essential
   - cmake
   - make
   - automake
@@ -13,18 +14,9 @@ default_apt_packages:
   - jq
   - perl
   - curl
-  - python3-tk
-  - python3-pip
-  - python3-cairo
-  - python3-dev
-  - magic-wormhole
-  - libx11-dev
-  - libvdpau-dev
-  - libva-dev
   - libpng-dev
   - libtiff-dev
   - libjpeg-dev
   - libcairo2-dev
-  - protobuf-compiler
 
 additional_apt_packages: []
