@@ -25,11 +25,13 @@
     user_process_dict: "{{ dict(_user | zip(_processes)) }}"
     relevant_processes_flatten: "{{ _processes | flatten | reject('match', '^(.*)(sshd|systemd|sd-pam|gvfs|goa-|pipewire|pulseaudio|dbus-daemon|gnome|tracker-miner)(.*)$') | list }}"
 
-# - ansible.builtin.debug: msg="{{ user_process_dict }}"
+- name: Print user to process mapping
+  ansible.builtin.debug:
+    msg: "{{ user_process_dict }}"
 
-# - ansible.builtin.debug: msg="{{ relevant_processes_flatten }}"
-
-# - ansible.builtin.debug: msg="{{ relevant_processes_flatten | length }}"
+- name: Print all the relevant process id
+  ansible.builtin.debug:
+    msg: "{{ relevant_processes_flatten }}"
 
 - name: Reboot block
   when: (relevant_processes_flatten | length == 0) and (inventory_hostname not in groups['lab_internal_web_host'])
