@@ -49,3 +49,14 @@
       ansible.builtin.include_role:
         name: role_unattended_upgrade
       when: is_unattended_upgrade | bool
+
+    - name: Include the role_docker
+      ansible.builtin.include_role:
+        name: role_docker
+        apply:
+          become: true
+      vars: # noqa: var-naming[no-role-prefix]
+        docker_users: "{{ current_users }}"
+        docker_install_compose: false
+        docker_install_compose_plugin: false
+      when: is_install_docker | bool

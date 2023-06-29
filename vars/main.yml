@@ -8,6 +8,7 @@ is_update_upgrade: false
 is_install_pip_packages: false
 is_get_gpu_info: false
 is_unattended_upgrade: false
+is_install_docker: false
 current_users:
   - tai
   - shengbang
