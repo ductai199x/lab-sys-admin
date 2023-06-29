@@ -19,5 +19,7 @@ default_apt_packages:
   - libjpeg-dev
   - libcairo2-dev
   - nfs-common
+  - unrar
+  - byobu
 
 additional_apt_packages: []

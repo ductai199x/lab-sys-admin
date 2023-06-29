@@ -19,7 +19,6 @@
   until: result is success
 
 - name: Make sure apt packages are present
-  throttle: 2
   become: true
   ansible.builtin.apt:
     name: "{{ default_apt_packages + additional_apt_packages }}"
@@ -29,8 +28,7 @@
   register: result
   until: result is success
 
-- name: Make sure python3.9 ppa is present
-  throttle: 4
+- name: Make sure python3.x ppa is present
   become: true
   ansible.builtin.apt_repository:
     repo: "ppa:deadsnakes/ppa"
@@ -40,8 +38,7 @@
   register: result
   until: result is success
 
-- name: Make sure python3.9 and python3.9-distutils are present
-  throttle: 4
+- name: Make sure python3.9, python3.9-distutils, and other python3.9 packages are present
   become: true
   ansible.builtin.apt:
     name:
@@ -49,6 +46,19 @@
       - python3.9-dev
       - python3.9-distutils
       - python3.9-venv
+      - python3.9-tk
+    state: present
+  retries: 3
+  delay: 5
+  register: result
+  until: result is success
+
+- name: Make sure python3.8 and python3.8-distutils are present
+  become: true
+  ansible.builtin.apt:
+    name:
+      - python3.8
+      - python3.8-distutils
     state: present
   retries: 3
   delay: 5
@@ -68,7 +78,6 @@
   when: (ansible_distribution + ansible_distribution_version) != "Ubuntu22.04"
 
 - name: Make sure FFmpeg 5.x ppa:savoury1/ffmpeg5 is present
-  throttle: 2
   become: true
   ansible.builtin.apt_repository:
     repo: "ppa:savoury1/ffmpeg5"
@@ -80,7 +89,7 @@
   when: (ansible_distribution + ansible_distribution_version) != "Ubuntu22.04"
 
 - name: Make sure FFmpeg 5.x is present
-  throttle: 2
+  throttle: 1
   become: true
   ansible.builtin.apt:
     name:
