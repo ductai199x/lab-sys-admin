@@ -5,3 +5,6 @@
 [submodule "role_oh_my_zsh"]
 	path = role_oh_my_zsh
 	url = git@github.com:ductai199x/ansible-role-oh-my-zsh.git
+[submodule "role_docker"]
+	path = role_docker
+	url = git@github.com:ductai199x/ansible-role-docker
