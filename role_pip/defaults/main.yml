@@ -2,6 +2,7 @@
 # defaults file for role_pip
 default_pip_packages:
   - bpytop
+  - nvitop
   - yq
   - tqdm
   - requests
@@ -11,6 +12,7 @@ default_pip_packages:
   - rich
   - virtualenv
   - pandas
+  - numpy
   - magic-wormhole
 
 additional_pip_packages: []

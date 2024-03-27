@@ -7,6 +7,10 @@
     cmd: set -o pipefail && echo "Y" | sudo apt --fix-broken install
   changed_when: false
   failed_when: false
+  retries: 1
+  delay: 5
+  register: result
+  until: result is success
 
 - name: Apt-get update and upgrade
   become: true
@@ -31,7 +35,8 @@
 - name: Make sure python3.x ppa is present
   become: true
   ansible.builtin.apt_repository:
-    repo: "ppa:deadsnakes/ppa"
+    filename: "deadsnakes-ubuntu-ppa-jammy"
+    repo: "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/deadsnakes-ubuntu-ppa.gpg] http://ppa.launchpad.net/deadsnakes/ppa/ubuntu jammy main"
     state: present
   retries: 3
   delay: 5
