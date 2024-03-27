@@ -9,6 +9,7 @@ default_pip_packages:
   - ipython
   - jmespath
   - black
+  - isort
   - rich
   - virtualenv
   - pandas
