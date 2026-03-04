@@ -37,7 +37,7 @@
 
 	function openProcesses(hostname: string, gpuIdx: number, gpuName: string) {
 		if (!data) return;
-		const gpu: GpuStats = data[hostname][gpuIdx][gpuName];
+		const gpu: GpuStats = data.server_gpu_info[hostname][gpuIdx][gpuName];
 
 		if (gpu.gpu_processes === 'N/A' || gpu.gpu_processes === '{}') {
 			selectedProcs = [];
@@ -48,9 +48,7 @@
 
 		try {
 			const parsed = JSON.parse(gpu.gpu_processes.replaceAll("'", '"'));
-			const processes: Array<Record<string, string>> = Array.isArray(parsed.process_info)
-				? parsed.process_info
-				: [parsed.process_info];
+			const processes: Array<Record<string, string>> = [parsed.process_info].flat();
 			const processInfo = JSON.parse(gpu.gpu_process_info.replaceAll("'", '"'));
 
 			selectedProcs = processes.map((proc) => {
@@ -98,7 +96,7 @@
 <div class="page">
 	<header>
 		<a href="/" class="back-link">&larr; Home</a>
-		<h1>Lab Machine Statuses</h1>
+		<h1>Lab Machine Statuses {#if data}(Last Updated: {data.build_datetime}){/if}</h1>
 		<div class="legend">
 			<span class="legend-item available">Available</span>
 			<span class="legend-item inuse">In Use</span>
@@ -140,8 +138,8 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each Object.keys(data) as hostname}
-						{#each data[hostname] as hostObj, gpuIdx}
+					{#each Object.keys(data.server_gpu_info) as hostname}
+						{#each data.server_gpu_info[hostname] as hostObj, gpuIdx}
 							{#each Object.keys(hostObj) as gpuName}
 								{@const gpu = hostObj[gpuName]}
 								{@const status = availabilityClass(gpuName, gpu.gpu_mem_usage.used)}
@@ -151,7 +149,7 @@
 									title="Click to view running processes"
 								>
 									{#if gpuIdx === 0}
-										<th rowspan={data[hostname].length} class="machine-name">
+										<th rowspan={data.server_gpu_info[hostname].length} class="machine-name">
 											{hostname}
 										</th>
 									{/if}
