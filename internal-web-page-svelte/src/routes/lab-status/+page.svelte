@@ -9,25 +9,39 @@
 	import { ArrowLeft, Cpu, HardDrive, Activity, Monitor, X, RefreshCw } from 'lucide-svelte';
 	import { cn } from '$lib/utils';
 
+	type Status = 'available' | 'inuse' | 'critical' | 'offline';
+
 	let data: MachinesResponse | null = $state(null);
 	let loading = $state(true);
+	let refreshing = $state(false);
 	let error = $state('');
-	let activeTab: 'gpu' | 'cpu' | 'disk' | 'processes' = $state('gpu');
+	let activeTab: string = $state('gpu');
 
 	let selectedGpuProcs: GpuProcess[] = $state([]);
 	let selectedGpuLabel = $state('');
 	let showModal = $state(false);
 
 	async function fetchData() {
+		if (!loading) refreshing = true;
 		try {
 			const res = await fetch('/api/machines');
-			if (!res.ok) throw new Error(`HTTP ${res.status}`);
-			data = await res.json();
-			error = '';
+			const body = await res.json();
+			if (!res.ok) {
+				// Use the server's error message if available, fall back to HTTP status
+				error = body?.error ?? `HTTP ${res.status}`;
+				// Still use partial data from error responses (known_machines, etc.)
+				if (body?.machines !== undefined) {
+					data = body as MachinesResponse;
+				}
+			} else {
+				data = body as MachinesResponse;
+				error = '';
+			}
 		} catch (err) {
-			error = (err as Error).message;
+			error = err instanceof Error ? err.message : 'Failed to fetch data';
 		}
 		loading = false;
+		refreshing = false;
 	}
 
 	$effect(() => {
@@ -39,12 +53,12 @@
 	function sortedHostnames(): string[] {
 		if (!data) return [];
 		const all =
-			data.known_machines.length > 0 ? data.known_machines : Object.keys(data.machines);
+			data.known_machines?.length > 0 ? data.known_machines : Object.keys(data.machines ?? {});
 		return [...new Set(all)].sort();
 	}
 
 	function getMachine(hostname: string): MachineData | null {
-		return data?.machines[hostname] ?? null;
+		return data?.machines?.[hostname] ?? null;
 	}
 
 	function timeSince(timestamp: string): string {
@@ -58,31 +72,54 @@
 		return `${Math.floor(seconds / 86400)}d ago`;
 	}
 
-	function gpuStatusClass(usedMib: number): 'available' | 'inuse' {
+	function gpuStatusClass(usedMib: number): Status {
 		return usedMib > 500 ? 'inuse' : 'available';
 	}
 
-	function cpuStatusClass(percent: number): 'available' | 'inuse' | 'critical' {
+	function cpuStatusClass(percent: number): Status {
 		if (percent > 80) return 'critical';
 		if (percent > 50) return 'inuse';
 		return 'available';
 	}
 
-	function diskStatusClass(percent: number): 'available' | 'inuse' | 'critical' {
+	function diskStatusClass(percent: number): Status {
 		if (percent > 90) return 'critical';
 		if (percent > 70) return 'inuse';
 		return 'available';
 	}
 
-	function ramStatusClass(machine: MachineData): 'available' | 'inuse' | 'critical' {
-		if (machine.ram.total_mib === 0) return 'critical';
+	function ramStatusClass(machine: MachineData): Status {
+		if (!machine.ram || machine.ram.total_mib === 0) return 'critical';
 		const pct = (machine.ram.used_mib / machine.ram.total_mib) * 100;
 		if (pct > 90) return 'critical';
 		if (pct > 70) return 'inuse';
 		return 'available';
 	}
 
-	function statusRowBg(status: 'available' | 'inuse' | 'critical' | 'offline'): string {
+	/** Get the worst (most severe) GPU status for a machine's hostname cell. */
+	function worstGpuStatus(machine: MachineData): Status {
+		if (!machine.gpu?.available || !machine.gpu.gpus?.length) return 'available';
+		let worst: Status = 'available';
+		for (const gpu of machine.gpu.gpus) {
+			const s = gpuStatusClass(gpu.memory.used_mib);
+			if (s === 'inuse') worst = 'inuse';
+		}
+		return worst;
+	}
+
+	/** Get the worst disk partition status for a machine's hostname cell. */
+	function worstDiskStatus(machine: MachineData): Status {
+		if (!machine.disk?.partitions?.length) return 'available';
+		const priority: Record<Status, number> = { available: 0, inuse: 1, critical: 2, offline: 3 };
+		let worst: Status = 'available';
+		for (const part of machine.disk.partitions) {
+			const s = diskStatusClass(part.percent);
+			if (priority[s] > priority[worst]) worst = s;
+		}
+		return worst;
+	}
+
+	function statusRowBg(status: Status): string {
 		switch (status) {
 			case 'available':
 				return 'bg-status-available-bg';
@@ -92,10 +129,14 @@
 				return 'bg-status-critical-bg';
 			case 'offline':
 				return 'bg-status-offline-bg';
+			default: {
+				const _exhaustive: never = status;
+				return 'bg-status-offline-bg';
+			}
 		}
 	}
 
-	function statusTextColor(status: 'available' | 'inuse' | 'critical' | 'offline'): string {
+	function statusTextColor(status: Status): string {
 		switch (status) {
 			case 'available':
 				return 'text-status-available';
@@ -105,6 +146,10 @@
 				return 'text-status-critical';
 			case 'offline':
 				return 'text-status-offline-fg';
+			default: {
+				const _exhaustive: never = status;
+				return 'text-status-offline-fg';
+			}
 		}
 	}
 
@@ -121,6 +166,29 @@
 
 	function closeModal() {
 		showModal = false;
+	}
+
+	function handleGpuRowKeydown(
+		e: KeyboardEvent,
+		hostname: string,
+		gpuIdx: number,
+		gpuName: string,
+		processes: GpuProcess[]
+	) {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			openGpuProcesses(hostname, gpuIdx, gpuName, processes);
+		}
+	}
+
+	function safeFixed(value: number | null | undefined, digits: number = 1): string {
+		if (value == null || isNaN(value)) return 'N/A';
+		return value.toFixed(digits);
+	}
+
+	function safeLocale(value: number | null | undefined): string {
+		if (value == null || isNaN(value)) return 'N/A';
+		return value.toLocaleString();
 	}
 </script>
 
@@ -144,9 +212,9 @@
 						</p>
 					{/if}
 				</div>
-				<Button variant="outline" size="sm" onclick={fetchData}>
-					<RefreshCw class="size-3.5" />
-					Refresh
+				<Button variant="outline" size="sm" onclick={fetchData} disabled={refreshing}>
+					<RefreshCw class={cn("size-3.5", refreshing && "animate-spin")} />
+					{refreshing ? 'Refreshing...' : 'Refresh'}
 				</Button>
 			</div>
 
@@ -163,7 +231,7 @@
 	<!-- Main Content -->
 	<main class="max-w-[1600px] mx-auto px-4 sm:px-6 py-6">
 		<!-- Tabs -->
-		<Tabs value={activeTab}>
+		<Tabs bind:value={activeTab}>
 			<TabsList class="mb-4">
 				<TabsTrigger active={activeTab === 'gpu'} onclick={() => (activeTab = 'gpu')}>
 					<Monitor class="size-3.5" />
@@ -191,13 +259,17 @@
 					</div>
 				</div>
 			{:else if !data}
-				{#if error}
-					<div class="text-center py-20">
-						<p class="text-destructive font-medium">{error}</p>
-					</div>
-				{:else}
-					<div class="text-center py-20 text-muted-foreground">No data available</div>
-				{/if}
+				<div class="text-center py-20">
+					{#if error}
+						<p class="text-destructive font-medium mb-4">{error}</p>
+						<Button variant="outline" size="sm" onclick={fetchData}>
+							<RefreshCw class="size-3.5" />
+							Retry
+						</Button>
+					{:else}
+						<p class="text-muted-foreground">No data available</p>
+					{/if}
+				</div>
 			{:else}
 				{#if error}
 					<div class="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -239,12 +311,13 @@
 												<td class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit">{hostname}</td>
 												<td colspan="11" class="px-3 py-2 text-center italic text-status-offline-fg">Offline</td>
 											</tr>
-										{:else if !machine.gpu.available || machine.gpu.gpus.length === 0}
+										{:else if !machine.gpu?.available || !machine.gpu.gpus?.length}
 											<tr class={cn("border-b transition-colors", statusRowBg('available'))}>
 												<td class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit">{hostname}</td>
 												<td colspan="11" class="px-3 py-2 text-center italic text-muted-foreground">No GPU</td>
 											</tr>
 										{:else}
+											{@const hostnameBg = statusRowBg(worstGpuStatus(machine))}
 											{#each machine.gpu.gpus as gpu, gpuIdx}
 												{@const status = gpuStatusClass(gpu.memory.used_mib)}
 												<tr
@@ -252,13 +325,17 @@
 														"border-b transition-colors cursor-pointer hover:brightness-95",
 														statusRowBg(status)
 													)}
-													onclick={() => openGpuProcesses(hostname, gpuIdx, gpu.name, gpu.processes)}
+													onclick={() => openGpuProcesses(hostname, gpuIdx, gpu.name, gpu.processes ?? [])}
+													onkeydown={(e) => handleGpuRowKeydown(e, hostname, gpuIdx, gpu.name, gpu.processes ?? [])}
+													tabindex="0"
+													role="button"
+													aria-label={`View processes for ${hostname} ${gpu.name} GPU ${gpuIdx}`}
 													title="Click to view running processes"
 												>
 													{#if gpuIdx === 0}
 														<td
 															rowspan={machine.gpu.gpus.length}
-															class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit border-r"
+															class={cn("px-3 py-2 font-semibold text-left sticky left-0 z-[1] border-r", hostnameBg)}
 														>
 															{hostname}
 														</td>
@@ -321,15 +398,15 @@
 											<tr class={cn("border-b transition-colors", statusRowBg(cpuStatus))}>
 												<td class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit border-r">{hostname}</td>
 												<td class="px-3 py-2 text-center tabular-nums border-r">{machine.cpu.percent}%</td>
-												<td class="px-3 py-2 text-center tabular-nums border-r">{machine.cpu.load_average['1min'].toFixed(1)}</td>
-												<td class="px-3 py-2 text-center tabular-nums border-r">{machine.cpu.load_average['5min'].toFixed(1)}</td>
+												<td class="px-3 py-2 text-center tabular-nums border-r">{safeFixed(machine.cpu.load_average?.['1min'])}</td>
+												<td class="px-3 py-2 text-center tabular-nums border-r">{safeFixed(machine.cpu.load_average?.['5min'])}</td>
 												<td class="px-3 py-2 text-center tabular-nums border-r">{machine.cpu.count_physical}/{machine.cpu.count_logical}</td>
-												<td class="px-3 py-2 text-center tabular-nums border-r">{machine.ram.total_mib.toLocaleString()}</td>
+												<td class="px-3 py-2 text-center tabular-nums border-r">{safeLocale(machine.ram.total_mib)}</td>
 												<td class={cn("px-3 py-2 text-center tabular-nums border-r", statusRowBg(ramStatusClass(machine)))}>
-													{machine.ram.used_mib.toLocaleString()}
+													{safeLocale(machine.ram.used_mib)}
 												</td>
-												<td class="px-3 py-2 text-center tabular-nums border-r">{machine.ram.free_mib.toLocaleString()}</td>
-												<td class="px-3 py-2 text-center tabular-nums">{machine.ram.cached_mib.toLocaleString()}</td>
+												<td class="px-3 py-2 text-center tabular-nums border-r">{safeLocale(machine.ram.free_mib)}</td>
+												<td class="px-3 py-2 text-center tabular-nums">{safeLocale(machine.ram.cached_mib)}</td>
 											</tr>
 										{/if}
 									{/each}
@@ -364,14 +441,20 @@
 												<td class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit">{hostname}</td>
 												<td colspan="7" class="px-3 py-2 text-center italic text-status-offline-fg">Offline</td>
 											</tr>
+										{:else if !machine.disk?.partitions?.length}
+											<tr class={cn("border-b transition-colors", statusRowBg('available'))}>
+												<td class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit">{hostname}</td>
+												<td colspan="7" class="px-3 py-2 text-center italic text-muted-foreground">No disk info</td>
+											</tr>
 										{:else}
+											{@const hostnameBg = statusRowBg(worstDiskStatus(machine))}
 											{#each machine.disk.partitions as part, partIdx}
 												{@const dStatus = diskStatusClass(part.percent)}
 												<tr class={cn("border-b transition-colors", statusRowBg(dStatus))}>
 													{#if partIdx === 0}
 														<td
 															rowspan={machine.disk.partitions.length}
-															class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit border-r"
+															class={cn("px-3 py-2 font-semibold text-left sticky left-0 z-[1] border-r", hostnameBg)}
 														>
 															{hostname}
 														</td>
@@ -414,57 +497,65 @@
 										<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 											<div>
 												<h4 class="text-sm font-medium text-muted-foreground mb-2">Top by CPU</h4>
-												<div class="rounded-lg border overflow-hidden">
-													<table class="w-full text-sm">
-														<thead>
-															<tr class="border-b bg-muted/50">
-																<th class="text-left font-medium text-muted-foreground px-3 py-2">PID</th>
-																<th class="text-left font-medium text-muted-foreground px-3 py-2">User</th>
-																<th class="text-center font-medium text-muted-foreground px-3 py-2">CPU%</th>
-																<th class="text-center font-medium text-muted-foreground px-3 py-2">RAM (MiB)</th>
-																<th class="text-left font-medium text-muted-foreground px-3 py-2">Command</th>
-															</tr>
-														</thead>
-														<tbody>
-															{#each machine.processes.top_by_cpu as proc}
-																<tr class="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
-																	<td class="px-3 py-1.5 tabular-nums font-mono text-xs">{proc.pid}</td>
-																	<td class="px-3 py-1.5">{proc.user}</td>
-																	<td class="px-3 py-1.5 text-center tabular-nums">{proc.cpu_percent.toFixed(1)}</td>
-																	<td class="px-3 py-1.5 text-center tabular-nums">{proc.ram_mib}</td>
-																	<td class="px-3 py-1.5 max-w-[300px] truncate font-mono text-xs" title={proc.command}>{proc.command}</td>
+												{#if machine.processes?.top_by_cpu?.length}
+													<div class="rounded-lg border overflow-hidden">
+														<table class="w-full text-sm">
+															<thead>
+																<tr class="border-b bg-muted/50">
+																	<th class="text-left font-medium text-muted-foreground px-3 py-2">PID</th>
+																	<th class="text-left font-medium text-muted-foreground px-3 py-2">User</th>
+																	<th class="text-center font-medium text-muted-foreground px-3 py-2">CPU%</th>
+																	<th class="text-center font-medium text-muted-foreground px-3 py-2">RAM (MiB)</th>
+																	<th class="text-left font-medium text-muted-foreground px-3 py-2">Command</th>
 																</tr>
-															{/each}
-														</tbody>
-													</table>
-												</div>
+															</thead>
+															<tbody>
+																{#each machine.processes.top_by_cpu as proc}
+																	<tr class="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
+																		<td class="px-3 py-1.5 tabular-nums font-mono text-xs">{proc.pid}</td>
+																		<td class="px-3 py-1.5">{proc.user}</td>
+																		<td class="px-3 py-1.5 text-center tabular-nums">{safeFixed(proc.cpu_percent)}</td>
+																		<td class="px-3 py-1.5 text-center tabular-nums">{proc.ram_mib}</td>
+																		<td class="px-3 py-1.5 max-w-[300px] truncate font-mono text-xs" title={proc.command}>{proc.command}</td>
+																	</tr>
+																{/each}
+															</tbody>
+														</table>
+													</div>
+												{:else}
+													<p class="text-sm text-muted-foreground italic">No process data</p>
+												{/if}
 											</div>
 											<div>
 												<h4 class="text-sm font-medium text-muted-foreground mb-2">Top by Memory</h4>
-												<div class="rounded-lg border overflow-hidden">
-													<table class="w-full text-sm">
-														<thead>
-															<tr class="border-b bg-muted/50">
-																<th class="text-left font-medium text-muted-foreground px-3 py-2">PID</th>
-																<th class="text-left font-medium text-muted-foreground px-3 py-2">User</th>
-																<th class="text-center font-medium text-muted-foreground px-3 py-2">CPU%</th>
-																<th class="text-center font-medium text-muted-foreground px-3 py-2">RAM (MiB)</th>
-																<th class="text-left font-medium text-muted-foreground px-3 py-2">Command</th>
-															</tr>
-														</thead>
-														<tbody>
-															{#each machine.processes.top_by_memory as proc}
-																<tr class="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
-																	<td class="px-3 py-1.5 tabular-nums font-mono text-xs">{proc.pid}</td>
-																	<td class="px-3 py-1.5">{proc.user}</td>
-																	<td class="px-3 py-1.5 text-center tabular-nums">{proc.cpu_percent.toFixed(1)}</td>
-																	<td class="px-3 py-1.5 text-center tabular-nums">{proc.ram_mib}</td>
-																	<td class="px-3 py-1.5 max-w-[300px] truncate font-mono text-xs" title={proc.command}>{proc.command}</td>
+												{#if machine.processes?.top_by_memory?.length}
+													<div class="rounded-lg border overflow-hidden">
+														<table class="w-full text-sm">
+															<thead>
+																<tr class="border-b bg-muted/50">
+																	<th class="text-left font-medium text-muted-foreground px-3 py-2">PID</th>
+																	<th class="text-left font-medium text-muted-foreground px-3 py-2">User</th>
+																	<th class="text-center font-medium text-muted-foreground px-3 py-2">CPU%</th>
+																	<th class="text-center font-medium text-muted-foreground px-3 py-2">RAM (MiB)</th>
+																	<th class="text-left font-medium text-muted-foreground px-3 py-2">Command</th>
 																</tr>
-															{/each}
-														</tbody>
-													</table>
-												</div>
+															</thead>
+															<tbody>
+																{#each machine.processes.top_by_memory as proc}
+																	<tr class="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
+																		<td class="px-3 py-1.5 tabular-nums font-mono text-xs">{proc.pid}</td>
+																		<td class="px-3 py-1.5">{proc.user}</td>
+																		<td class="px-3 py-1.5 text-center tabular-nums">{safeFixed(proc.cpu_percent)}</td>
+																		<td class="px-3 py-1.5 text-center tabular-nums">{proc.ram_mib}</td>
+																		<td class="px-3 py-1.5 max-w-[300px] truncate font-mono text-xs" title={proc.command}>{proc.command}</td>
+																	</tr>
+																{/each}
+															</tbody>
+														</table>
+													</div>
+												{:else}
+													<p class="text-sm text-muted-foreground italic">No process data</p>
+												{/if}
 											</div>
 										</div>
 									</CardContent>
@@ -513,7 +604,7 @@
 										<Badge variant="outline">{proc.type}</Badge>
 									</td>
 									<td class="px-3 py-2 text-center tabular-nums">{proc.gpu_memory_mib}</td>
-									<td class="px-3 py-2 text-center tabular-nums">{proc.cpu_percent.toFixed(1)}</td>
+									<td class="px-3 py-2 text-center tabular-nums">{safeFixed(proc.cpu_percent)}</td>
 									<td class="px-3 py-2 text-center tabular-nums">{proc.ram_mib}</td>
 									<td class="px-3 py-2 max-w-[300px] truncate font-mono text-xs" title={proc.command}>{proc.command}</td>
 								</tr>
