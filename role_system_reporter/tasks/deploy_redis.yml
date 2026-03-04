@@ -1,0 +1,29 @@
+---
+# Deploy Redis on the internal web host (lab3001)
+
+- name: Install Redis server
+  become: true
+  ansible.builtin.apt:
+    name: redis-server
+    state: present
+  retries: 3
+  delay: 5
+  register: result
+  until: result is success
+
+- name: Deploy Redis configuration
+  become: true
+  ansible.builtin.template:
+    src: redis.conf.j2
+    dest: /etc/redis/redis.conf
+    owner: redis
+    group: redis
+    mode: "0640"
+  notify: restart redis
+
+- name: Enable and start Redis
+  become: true
+  ansible.builtin.systemd:
+    name: redis-server
+    enabled: true
+    state: started

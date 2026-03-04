@@ -1,0 +1,10 @@
+---
+galaxy_info:
+  author: MISL Lab
+  description: Deploys the system_reporter agent, Redis, and updated SvelteKit dashboard
+  min_ansible_version: "2.1"
+  galaxy_tags:
+    - monitoring
+    - gpu
+    - redis
+dependencies: []

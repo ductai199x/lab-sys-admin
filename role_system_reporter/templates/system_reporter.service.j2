@@ -1,0 +1,23 @@
+[Unit]
+Description=System Reporter Agent - pushes machine metrics to Redis
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Environment=SYSTEM_REPORTER_REDIS_HOST={{ system_reporter_redis_host }}
+Environment=SYSTEM_REPORTER_REDIS_PORT={{ system_reporter_redis_port }}
+Environment=SYSTEM_REPORTER_REDIS_DB={{ system_reporter_redis_db }}
+Environment=SYSTEM_REPORTER_INTERVAL={{ system_reporter_interval }}
+Environment=SYSTEM_REPORTER_TTL={{ system_reporter_ttl }}
+ExecStart={{ system_reporter_venv_dir }}/bin/python -m system_reporter.agent
+WorkingDirectory={{ system_reporter_install_dir }}
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=system_reporter
+
+[Install]
+WantedBy=multi-user.target

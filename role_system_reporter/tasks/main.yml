@@ -1,0 +1,12 @@
+---
+# Main entry point for role_system_reporter
+- name: Deploy the system_reporter agent on all machines
+  ansible.builtin.include_tasks: deploy_agent.yml
+
+- name: Deploy Redis on the internal web host
+  ansible.builtin.include_tasks: deploy_redis.yml
+  when: inventory_hostname == groups['lab_internal_web_host'][0]
+
+- name: Deploy updated SvelteKit webapp on the internal web host
+  ansible.builtin.include_tasks: deploy_webapp.yml
+  when: inventory_hostname == groups['lab_internal_web_host'][0]

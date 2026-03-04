@@ -1,0 +1,10 @@
+# Redis configuration for system_reporter
+bind 0.0.0.0
+port {{ system_reporter_redis_port }}
+protected-mode no
+maxmemory {{ system_reporter_redis_maxmemory }}
+maxmemory-policy allkeys-lru
+save ""
+appendonly no
+tcp-keepalive 60
+timeout 0

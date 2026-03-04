@@ -1,0 +1,67 @@
+---
+# Deploy updated SvelteKit webapp on the internal web host
+
+- name: Set internal webpage variable
+  ansible.builtin.set_fact:
+    internal_webpage_dir: "/home/ansible/internal_web"
+
+- name: Create directory for internal web page
+  ansible.builtin.file:
+    path: "{{ internal_webpage_dir }}"
+    owner: ansible
+    group: ansible
+    mode: "0755"
+    state: directory
+
+- name: Copy SvelteKit app files
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ internal_webpage_dir }}"
+    owner: ansible
+    group: ansible
+    mode: "0755"
+  with_items:
+    - "internal-web-page-svelte/src"
+    - "internal-web-page-svelte/static"
+    - "internal-web-page-svelte/package.json"
+    - "internal-web-page-svelte/package-lock.json"
+    - "internal-web-page-svelte/svelte.config.js"
+    - "internal-web-page-svelte/tsconfig.json"
+    - "internal-web-page-svelte/vite.config.ts"
+
+- name: Get previous npm/node/forever processes
+  become: true
+  community.general.pids:
+    pattern: (node|npm|forever)\s+(.*)\s+start.*
+  register: npm_run_start_pids
+
+- name: Stop existing web server processes
+  become: true
+  ansible.builtin.command:
+    cmd: "kill {{ item }}"
+  with_items: "{{ npm_run_start_pids.pids }}"
+  failed_when: false
+  changed_when: false
+
+- name: Run npm install
+  ansible.builtin.shell:
+    cmd: "cd {{ internal_webpage_dir }} && npm install"
+  changed_when: true
+
+- name: Run npm build
+  ansible.builtin.shell:
+    cmd: "cd {{ internal_webpage_dir }} && npm run build"
+  environment:
+    REDIS_URL: "redis://localhost:{{ system_reporter_redis_port }}"
+    KNOWN_MACHINES: "{{ groups['labservers'] | join(',') }}"
+  changed_when: true
+
+- name: Start webapp with forever
+  ansible.builtin.shell:
+    cmd: >-
+      cd {{ internal_webpage_dir }} &&
+      REDIS_URL=redis://localhost:{{ system_reporter_redis_port }}
+      KNOWN_MACHINES={{ groups['labservers'] | join(',') }}
+      ./node_modules/forever/bin/forever start -c 'npm run start' ./
+    executable: /bin/bash
+  changed_when: true

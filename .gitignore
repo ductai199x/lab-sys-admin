@@ -11,3 +11,7 @@ lab_machine_status.html
 secret_key
 
 *log_dump*
+
+# Python
+__pycache__
+*.pyc

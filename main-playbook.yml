@@ -60,3 +60,8 @@
         docker_install_compose: false
         docker_install_compose_plugin: false
       when: is_install_docker | bool
+
+    - name: Include the role_system_reporter
+      ansible.builtin.include_role:
+        name: role_system_reporter
+      when: is_deploy_system_reporter | bool
