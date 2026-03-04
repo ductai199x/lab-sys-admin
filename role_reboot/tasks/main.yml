@@ -8,7 +8,7 @@
     PATH: "{{ env_path }}"
   args:
     executable: /bin/zsh
-  with_items: "{{ current_users }}"
+  loop: "{{ current_users }}"
   register: processes
   changed_when: false
   failed_when: false

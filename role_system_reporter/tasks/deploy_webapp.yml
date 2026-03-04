@@ -20,7 +20,7 @@
     owner: ansible
     group: ansible
     mode: "0755"
-  with_items:
+  loop:
     - "internal-web-page-svelte/src"
     - "internal-web-page-svelte/static"
     - "internal-web-page-svelte/package.json"
