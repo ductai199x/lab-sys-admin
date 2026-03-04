@@ -30,6 +30,21 @@
     - "internal-web-page-svelte/vite.config.ts"
     - "internal-web-page-svelte/.npmrc"
 
+- name: Stop existing internal_web service if running
+  become: true
+  ansible.builtin.systemd:
+    name: internal_web
+    state: stopped
+  failed_when: false
+
+- name: Kill any leftover processes on port 3000 (e.g. old forever-managed server)
+  become: true
+  ansible.builtin.shell:
+    cmd: fuser -k 3000/tcp
+    executable: /bin/bash
+  failed_when: false
+  changed_when: false
+
 - name: Run npm install
   ansible.builtin.shell:
     cmd: "cd {{ internal_webpage_dir }} && npm install"
