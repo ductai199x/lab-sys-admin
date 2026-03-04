@@ -2,12 +2,18 @@
 # defaults file for role_pip
 default_pip_packages:
   - bpytop
+  - nvitop
   - yq
   - tqdm
   - requests
   - ipython
   - jmespath
   - black
+  - isort
   - rich
+  - virtualenv
+  - pandas
+  - numpy
+  - magic-wormhole
 
 additional_pip_packages: []

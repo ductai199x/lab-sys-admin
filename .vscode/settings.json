@@ -6,4 +6,5 @@
     },
     "prettier.printWidth": 110,
     "editor.tabSize": 2,
+    "ansible.python.interpreterPath": "/usr/bin/python3.9",
 }
