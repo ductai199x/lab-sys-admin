@@ -54,7 +54,7 @@ function buildMockMachines(): Record<string, MachineData> {
 						utilization: { gpu_percent: 0, memory_percent: 0 },
 						temperature_c: 35,
 						clocks: { graphics_mhz: 210, sm_mhz: 210, memory_mhz: 405 },
-						power: { usage_watts: 22, limit_watts: 300 },
+						power: { usage_watts: null, limit_watts: null },
 						processes: []
 					}
 				]
