@@ -93,11 +93,11 @@ export interface ProcessInfo {
 export interface MachineData {
 	hostname: string;
 	timestamp: string;
-	gpu: GpuInfo;
-	cpu: CpuInfo;
-	ram: RamInfo;
-	disk: DiskInfo;
-	processes: ProcessInfo;
+	gpu?: GpuInfo;
+	cpu?: CpuInfo;
+	ram?: RamInfo;
+	disk?: DiskInfo;
+	processes?: ProcessInfo;
 }
 
 export interface MachinesResponse {

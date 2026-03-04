@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { createClient } from 'redis';
+import { createClient, type RedisClientType } from 'redis';
 import type { RequestHandler } from './$types';
 import { getMockResponse } from '$lib/mock-data';
 
@@ -7,17 +7,17 @@ const USE_MOCK_DATA = process.env.USE_MOCK_DATA === 'true';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const KNOWN_MACHINES = (process.env.KNOWN_MACHINES || '').split(',').filter(Boolean);
 
-let redisClient: ReturnType<typeof createClient> | null = null;
-let connectPromise: Promise<ReturnType<typeof createClient>> | null = null;
+let redisClient: RedisClientType | null = null;
+let connectPromise: Promise<RedisClientType> | null = null;
 
-async function getRedisClient() {
+async function getRedisClient(): Promise<RedisClientType> {
 	if (redisClient?.isOpen) return redisClient;
 	if (connectPromise) return connectPromise;
 
 	connectPromise = (async () => {
 		try {
-			const client = createClient({ url: REDIS_URL });
-			client.on('error', (err) => console.error('Redis client error:', err));
+			const client: RedisClientType = createClient({ url: REDIS_URL });
+			client.on('error', (err: unknown) => console.error('Redis client error:', err));
 			await client.connect();
 			redisClient = client;
 			return client;
