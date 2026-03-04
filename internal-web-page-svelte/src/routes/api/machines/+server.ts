@@ -1,7 +1,9 @@
 import { json } from '@sveltejs/kit';
 import { createClient } from 'redis';
 import type { RequestHandler } from './$types';
+import { getMockResponse } from '$lib/mock-data';
 
+const USE_MOCK_DATA = process.env.USE_MOCK_DATA === 'true';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const KNOWN_MACHINES = (process.env.KNOWN_MACHINES || '').split(',').filter(Boolean);
 
@@ -28,6 +30,10 @@ async function getRedisClient() {
 }
 
 export const GET: RequestHandler = async () => {
+	if (USE_MOCK_DATA) {
+		return json(getMockResponse());
+	}
+
 	try {
 		const client = await getRedisClient();
 		const keys = await client.keys('machine:*');
