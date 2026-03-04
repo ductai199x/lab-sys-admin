@@ -5,6 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
+		"dev:mock": "USE_MOCK_DATA=true vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
 		"start": "node build",
