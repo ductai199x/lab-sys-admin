@@ -40,11 +40,6 @@
         name: role_pip
       when: is_install_pip_packages | bool
 
-    - name: Include the role_gpu
-      ansible.builtin.include_role:
-        name: role_gpu
-      when: is_get_gpu_info | bool
-
     - name: Include the role_unattended_upgrade
       ansible.builtin.include_role:
         name: role_unattended_upgrade
