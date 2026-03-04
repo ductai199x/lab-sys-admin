@@ -7,11 +7,6 @@
     - vars/secrets.yml
 
   tasks:
-    - name: Set fact for unreachable_hosts
-      ansible.builtin.set_fact:
-        unreachable_hosts: "{{ ansible_play_hosts_all | difference(ansible_play_hosts) }}"
-        cacheable: "yes"
-
     - name: Include the role_apt
       ansible.builtin.include_role:
         name: role_apt
