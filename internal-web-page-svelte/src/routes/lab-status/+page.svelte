@@ -8,6 +8,7 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { ArrowLeft, Cpu, HardDrive, Activity, Monitor, X, RefreshCw } from 'lucide-svelte';
 	import { cn } from '$lib/utils';
+	import { untrack } from 'svelte';
 
 	type Status = 'available' | 'inuse' | 'critical' | 'offline';
 
@@ -45,7 +46,7 @@
 	}
 
 	$effect(() => {
-		fetchData();
+		untrack(() => fetchData());
 		const timer = setInterval(fetchData, 30000);
 		return () => clearInterval(timer);
 	});
@@ -328,8 +329,7 @@
 													onclick={() => openGpuProcesses(hostname, gpuIdx, gpu.name, gpu.processes ?? [])}
 													onkeydown={(e) => handleGpuRowKeydown(e, hostname, gpuIdx, gpu.name, gpu.processes ?? [])}
 													tabindex="0"
-													role="button"
-													aria-label={`View processes for ${hostname} ${gpu.name} GPU ${gpuIdx}`}
+													aria-label={`${hostname} ${gpu.name} GPU ${gpuIdx} - press Enter to view processes`}
 													title="Click to view running processes"
 												>
 													{#if gpuIdx === 0}
@@ -393,7 +393,12 @@
 												<td class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit">{hostname}</td>
 												<td colspan="8" class="px-3 py-2 text-center italic text-status-offline-fg">Offline</td>
 											</tr>
-										{:else}
+										{:else if !machine.cpu || !machine.ram}
+										<tr class={cn("border-b transition-colors", statusRowBg('available'))}>
+											<td class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit">{hostname}</td>
+											<td colspan="8" class="px-3 py-2 text-center italic text-muted-foreground">No CPU/RAM info</td>
+										</tr>
+									{:else}
 											{@const cpuStatus = cpuStatusClass(machine.cpu.percent)}
 											<tr class={cn("border-b transition-colors", statusRowBg(cpuStatus))}>
 												<td class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit border-r">{hostname}</td>
