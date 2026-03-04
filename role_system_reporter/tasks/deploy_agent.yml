@@ -1,0 +1,65 @@
+---
+# Deploy system_reporter agent to each machine
+
+- name: Install system apt dependencies for system_reporter
+  become: true
+  ansible.builtin.apt:
+    name:
+      - python3
+      - python3-pip
+      - python3-venv
+    state: present
+  retries: 3
+  delay: 5
+  register: result
+  until: result is success
+
+- name: Create system_reporter install directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ system_reporter_install_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Copy system_reporter Python package
+  become: true
+  ansible.builtin.copy:
+    src: system_reporter/
+    dest: "{{ system_reporter_install_dir }}/system_reporter/"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart system_reporter
+
+- name: Create Python virtual environment
+  become: true
+  ansible.builtin.command:
+    cmd: "python3 -m venv {{ system_reporter_venv_dir }}"
+    creates: "{{ system_reporter_venv_dir }}/bin/python"
+
+- name: Install Python dependencies in venv
+  become: true
+  ansible.builtin.pip:
+    requirements: "{{ system_reporter_install_dir }}/system_reporter/requirements.txt"
+    virtualenv: "{{ system_reporter_venv_dir }}"
+  notify: restart system_reporter
+
+- name: Deploy systemd unit file
+  become: true
+  ansible.builtin.template:
+    src: system_reporter.service.j2
+    dest: /etc/systemd/system/system_reporter.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart system_reporter
+
+- name: Enable and start system_reporter service
+  become: true
+  ansible.builtin.systemd:
+    name: system_reporter
+    enabled: true
+    state: started
+    daemon_reload: true

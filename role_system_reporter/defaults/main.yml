@@ -1,0 +1,10 @@
+---
+# defaults for role_system_reporter
+system_reporter_redis_host: "10.0.0.3"
+system_reporter_redis_port: 6379
+system_reporter_redis_db: 0
+system_reporter_interval: 30
+system_reporter_ttl: 60
+system_reporter_install_dir: /opt/system_reporter
+system_reporter_venv_dir: /opt/system_reporter/venv
+system_reporter_redis_maxmemory: "64mb"
