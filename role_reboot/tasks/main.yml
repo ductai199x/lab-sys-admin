@@ -56,5 +56,5 @@
     - name: Mount all available drives in fstab
       become: true
       ansible.builtin.command:
-        cmd: sudo mount -a
+        cmd: mount -a
       changed_when: false

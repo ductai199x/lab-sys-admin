@@ -170,6 +170,7 @@
     - "internal-web-page-svelte/svelte.config.js"
     - "internal-web-page-svelte/tsconfig.json"
     - "internal-web-page-svelte/vite.config.ts"
+    - "internal-web-page-svelte/.npmrc"
   delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
   run_once: true
 

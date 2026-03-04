@@ -13,12 +13,15 @@ async function getRedisClient() {
 	if (connectPromise) return connectPromise;
 
 	connectPromise = (async () => {
-		const client = createClient({ url: REDIS_URL });
-		client.on('error', (err) => console.error('Redis client error:', err));
-		await client.connect();
-		redisClient = client;
-		connectPromise = null;
-		return client;
+		try {
+			const client = createClient({ url: REDIS_URL });
+			client.on('error', (err) => console.error('Redis client error:', err));
+			await client.connect();
+			redisClient = client;
+			return client;
+		} finally {
+			connectPromise = null;
+		}
 	})();
 
 	return connectPromise;
@@ -36,7 +39,9 @@ export const GET: RequestHandler = async () => {
 				if (raw) {
 					try {
 						const data = JSON.parse(raw);
-						machines[data.hostname] = data;
+						if (data.hostname) {
+							machines[data.hostname] = data;
+						}
 					} catch {
 						// skip malformed entries
 					}
