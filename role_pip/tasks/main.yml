@@ -86,3 +86,9 @@
     state: latest
     extra_args: --user
   when: pip_version == "python3.9"
+
+- name: Install uv
+  become: true
+  ansible.builtin.shell:
+    cmd: curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
+    creates: /usr/local/bin/uv
