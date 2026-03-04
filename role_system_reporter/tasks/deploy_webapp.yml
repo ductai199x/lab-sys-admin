@@ -5,6 +5,47 @@
   ansible.builtin.set_fact:
     internal_webpage_dir: "/home/ansible/internal_web"
 
+- name: Check if Node.js is installed
+  ansible.builtin.command:
+    cmd: node --version
+  register: node_version_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Node.js LTS if not present
+  when: node_version_check.rc != 0
+  become: true
+  block:
+    - name: Install ca-certificates and curl
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+        state: present
+
+    - name: Create keyrings directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Download NodeSource GPG key
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+        creates: /etc/apt/keyrings/nodesource.gpg
+
+    - name: Add NodeSource repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main"
+        filename: nodesource
+        state: present
+
+    - name: Install Node.js
+      ansible.builtin.apt:
+        name: nodejs
+        state: present
+        update_cache: true
+
 - name: Create directory for internal web page
   ansible.builtin.file:
     path: "{{ internal_webpage_dir }}"
