@@ -1,5 +1,13 @@
 <script lang="ts">
 	import type { MachinesResponse, MachineData, GpuProcess } from '$lib/types';
+	import { Card, CardHeader, CardTitle, CardContent } from '$lib/components/ui/card';
+	import { Badge } from '$lib/components/ui/badge';
+	import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '$lib/components/ui/table';
+	import { Tabs, TabsList, TabsTrigger, TabsContent } from '$lib/components/ui/tabs';
+	import { Dialog, DialogContent, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
+	import Button from '$lib/components/ui/button/button.svelte';
+	import { ArrowLeft, Cpu, HardDrive, Activity, Monitor, X, RefreshCw } from 'lucide-svelte';
+	import { cn } from '$lib/utils';
 
 	let data: MachinesResponse | null = $state(null);
 	let loading = $state(true);
@@ -50,28 +58,54 @@
 		return `${Math.floor(seconds / 86400)}d ago`;
 	}
 
-	function gpuStatusClass(usedMib: number): string {
+	function gpuStatusClass(usedMib: number): 'available' | 'inuse' {
 		return usedMib > 500 ? 'inuse' : 'available';
 	}
 
-	function cpuStatusClass(percent: number): string {
-		if (percent > 80) return 'unavailable';
+	function cpuStatusClass(percent: number): 'available' | 'inuse' | 'critical' {
+		if (percent > 80) return 'critical';
 		if (percent > 50) return 'inuse';
 		return 'available';
 	}
 
-	function diskStatusClass(percent: number): string {
-		if (percent > 90) return 'unavailable';
+	function diskStatusClass(percent: number): 'available' | 'inuse' | 'critical' {
+		if (percent > 90) return 'critical';
 		if (percent > 70) return 'inuse';
 		return 'available';
 	}
 
-	function ramStatusClass(machine: MachineData): string {
-		if (machine.ram.total_mib === 0) return 'unavailable';
+	function ramStatusClass(machine: MachineData): 'available' | 'inuse' | 'critical' {
+		if (machine.ram.total_mib === 0) return 'critical';
 		const pct = (machine.ram.used_mib / machine.ram.total_mib) * 100;
-		if (pct > 90) return 'unavailable';
+		if (pct > 90) return 'critical';
 		if (pct > 70) return 'inuse';
 		return 'available';
+	}
+
+	function statusRowBg(status: 'available' | 'inuse' | 'critical' | 'offline'): string {
+		switch (status) {
+			case 'available':
+				return 'bg-status-available-bg';
+			case 'inuse':
+				return 'bg-status-inuse-bg';
+			case 'critical':
+				return 'bg-status-critical-bg';
+			case 'offline':
+				return 'bg-status-offline-bg';
+		}
+	}
+
+	function statusTextColor(status: 'available' | 'inuse' | 'critical' | 'offline'): string {
+		switch (status) {
+			case 'available':
+				return 'text-status-available';
+			case 'inuse':
+				return 'text-status-inuse';
+			case 'critical':
+				return 'text-status-critical';
+			case 'offline':
+				return 'text-status-offline-fg';
+		}
 	}
 
 	function openGpuProcesses(
@@ -88,681 +122,406 @@
 	function closeModal() {
 		showModal = false;
 	}
-
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') closeModal();
-	}
-
-	function handleBackdropClick(e: MouseEvent) {
-		if ((e.target as HTMLElement).classList.contains('modal-backdrop')) closeModal();
-	}
 </script>
 
 <svelte:head>
 	<title>Lab Machine Status - MISL Lab</title>
 </svelte:head>
 
-<svelte:window onkeydown={handleKeydown} />
+<div class="min-h-screen">
+	<!-- Header -->
+	<header class="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10">
+		<div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-4">
+			<div class="flex items-center gap-4">
+				<a href="/" class="text-muted-foreground hover:text-foreground transition-colors no-underline">
+					<ArrowLeft class="size-4" />
+				</a>
+				<div class="flex-1">
+					<h1 class="text-xl font-semibold tracking-tight">Lab Machine Statuses</h1>
+					{#if data}
+						<p class="text-sm text-muted-foreground mt-0.5">
+							Updated {timeSince(data.fetched_at)} &middot; {data.machine_count} machine{data.machine_count !== 1 ? 's' : ''} online
+						</p>
+					{/if}
+				</div>
+				<Button variant="outline" size="sm" onclick={fetchData}>
+					<RefreshCw class="size-3.5" />
+					Refresh
+				</Button>
+			</div>
 
-<div class="page">
-	<header>
-		<a href="/" class="back-link">&larr; Home</a>
-		<h1>Lab Machine Statuses</h1>
-		{#if data}
-			<p class="last-updated">
-				Last updated: {timeSince(data.fetched_at)} &middot; {data.machine_count} machine(s) online
-			</p>
-		{/if}
-		<div class="legend">
-			<span class="legend-item available">Available</span>
-			<span class="legend-item inuse">In Use</span>
-			<span class="legend-item unavailable">Critical</span>
-			<span class="legend-item offline">Offline</span>
+			<!-- Status Legend -->
+			<div class="flex flex-wrap gap-2 mt-3">
+				<Badge class="bg-status-available-bg text-status-available border-status-available/30">Available</Badge>
+				<Badge class="bg-status-inuse-bg text-status-inuse border-status-inuse/30">In Use</Badge>
+				<Badge class="bg-status-critical-bg text-status-critical border-status-critical/30">Critical</Badge>
+				<Badge class="bg-status-offline-bg text-status-offline-fg border-status-offline-fg/30">Offline</Badge>
+			</div>
 		</div>
 	</header>
 
-	<nav class="tabs">
-		<button class:active={activeTab === 'gpu'} onclick={() => (activeTab = 'gpu')}>GPU</button>
-		<button class:active={activeTab === 'cpu'} onclick={() => (activeTab = 'cpu')}
-			>CPU & RAM</button
-		>
-		<button class:active={activeTab === 'disk'} onclick={() => (activeTab = 'disk')}>Disk</button>
-		<button class:active={activeTab === 'processes'} onclick={() => (activeTab = 'processes')}
-			>Processes</button
-		>
-	</nav>
+	<!-- Main Content -->
+	<main class="max-w-[1600px] mx-auto px-4 sm:px-6 py-6">
+		<!-- Tabs -->
+		<Tabs value={activeTab}>
+			<TabsList class="mb-4">
+				<TabsTrigger active={activeTab === 'gpu'} onclick={() => (activeTab = 'gpu')}>
+					<Monitor class="size-3.5" />
+					GPU
+				</TabsTrigger>
+				<TabsTrigger active={activeTab === 'cpu'} onclick={() => (activeTab = 'cpu')}>
+					<Cpu class="size-3.5" />
+					CPU & RAM
+				</TabsTrigger>
+				<TabsTrigger active={activeTab === 'disk'} onclick={() => (activeTab = 'disk')}>
+					<HardDrive class="size-3.5" />
+					Disk
+				</TabsTrigger>
+				<TabsTrigger active={activeTab === 'processes'} onclick={() => (activeTab = 'processes')}>
+					<Activity class="size-3.5" />
+					Processes
+				</TabsTrigger>
+			</TabsList>
 
-	{#if loading}
-		<p class="status-msg">Loading...</p>
-	{:else if !data}
-		{#if error}
-			<p class="status-msg error">{error}</p>
-		{:else}
-			<p class="status-msg">No data available</p>
-		{/if}
-	{:else}
-		{#if error}
-			<p class="status-msg error">{error} (showing last known data)</p>
-		{/if}
-		<!-- GPU Tab -->
-		{#if activeTab === 'gpu'}
-			<div class="table-wrapper">
-				<table>
-					<thead>
-						<tr>
-							<th rowspan="2">Machine</th>
-							<th rowspan="2">GPU</th>
-							<th colspan="3">Memory (MiB)</th>
-							<th colspan="2">Utilization</th>
-							<th rowspan="2">Temp</th>
-							<th colspan="2">Clock (MHz)</th>
-							<th rowspan="2">Power</th>
-							<th rowspan="2">Driver</th>
-						</tr>
-						<tr>
-							<th>Total</th>
-							<th>Used</th>
-							<th>Free</th>
-							<th>GPU</th>
-							<th>Mem</th>
-							<th>Graphics</th>
-							<th>Mem</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each sortedHostnames() as hostname}
-							{@const machine = getMachine(hostname)}
-							{#if !machine}
-								<tr class="offline">
-									<th class="machine-name">{hostname}</th>
-									<td colspan="11" class="offline-cell">Offline</td>
-								</tr>
-							{:else if !machine.gpu.available || machine.gpu.gpus.length === 0}
-								<tr class="available">
-									<th class="machine-name">{hostname}</th>
-									<td colspan="11" class="no-gpu-cell">No GPU</td>
-								</tr>
-							{:else}
-								{#each machine.gpu.gpus as gpu, gpuIdx}
-									{@const status = gpuStatusClass(gpu.memory.used_mib)}
-									<tr
-										class={status}
-										onclick={() =>
-											openGpuProcesses(hostname, gpuIdx, gpu.name, gpu.processes)}
-										title="Click to view running processes"
-									>
-										{#if gpuIdx === 0}
-											<th rowspan={machine.gpu.gpus.length} class="machine-name">
-												{hostname}
-											</th>
-										{/if}
-										<td class="gpu-name">{gpu.name}</td>
-										<td>{gpu.memory.total_mib}</td>
-										<td>{gpu.memory.used_mib}</td>
-										<td>{gpu.memory.free_mib}</td>
-										<td>{gpu.utilization.gpu_percent}%</td>
-										<td>{gpu.utilization.memory_percent}%</td>
-										<td>{gpu.temperature_c}&deg;C</td>
-										<td>{gpu.clocks.graphics_mhz}</td>
-										<td>{gpu.clocks.memory_mhz}</td>
-										<td
-											>{gpu.power.usage_watts != null
-												? `${gpu.power.usage_watts}W`
-												: 'N/A'}</td
-										>
-										<td>{machine.gpu.driver_version ?? 'N/A'}</td>
-									</tr>
-								{/each}
-							{/if}
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		{/if}
-
-		<!-- CPU & RAM Tab -->
-		{#if activeTab === 'cpu'}
-			<div class="table-wrapper">
-				<table>
-					<thead>
-						<tr>
-							<th rowspan="2">Machine</th>
-							<th colspan="4">CPU</th>
-							<th colspan="4">RAM (MiB)</th>
-						</tr>
-						<tr>
-							<th>Usage</th>
-							<th>Load (1m)</th>
-							<th>Load (5m)</th>
-							<th>Cores</th>
-							<th>Total</th>
-							<th>Used</th>
-							<th>Free</th>
-							<th>Cached</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each sortedHostnames() as hostname}
-							{@const machine = getMachine(hostname)}
-							{#if !machine}
-								<tr class="offline">
-									<th class="machine-name">{hostname}</th>
-									<td colspan="8" class="offline-cell">Offline</td>
-								</tr>
-							{:else}
-								<tr class={cpuStatusClass(machine.cpu.percent)}>
-									<th class="machine-name">{hostname}</th>
-									<td>{machine.cpu.percent}%</td>
-									<td>{machine.cpu.load_average['1min'].toFixed(1)}</td>
-									<td>{machine.cpu.load_average['5min'].toFixed(1)}</td>
-									<td>{machine.cpu.count_physical}/{machine.cpu.count_logical}</td>
-									<td>{machine.ram.total_mib.toLocaleString()}</td>
-									<td class={ramStatusClass(machine)}
-										>{machine.ram.used_mib.toLocaleString()}</td
-									>
-									<td>{machine.ram.free_mib.toLocaleString()}</td>
-									<td>{machine.ram.cached_mib.toLocaleString()}</td>
-								</tr>
-							{/if}
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		{/if}
-
-		<!-- Disk Tab -->
-		{#if activeTab === 'disk'}
-			<div class="table-wrapper">
-				<table>
-					<thead>
-						<tr>
-							<th>Machine</th>
-							<th>Mount</th>
-							<th>Device</th>
-							<th>FS</th>
-							<th>Total (GiB)</th>
-							<th>Used (GiB)</th>
-							<th>Free (GiB)</th>
-							<th>Usage</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each sortedHostnames() as hostname}
-							{@const machine = getMachine(hostname)}
-							{#if !machine}
-								<tr class="offline">
-									<th class="machine-name">{hostname}</th>
-									<td colspan="7" class="offline-cell">Offline</td>
-								</tr>
-							{:else}
-								{#each machine.disk.partitions as part, partIdx}
-									<tr class={diskStatusClass(part.percent)}>
-										{#if partIdx === 0}
-											<th
-												rowspan={machine.disk.partitions.length}
-												class="machine-name"
-											>
-												{hostname}
-											</th>
-										{/if}
-										<td>{part.mountpoint}</td>
-										<td>{part.device}</td>
-										<td>{part.fstype}</td>
-										<td>{part.total_gib}</td>
-										<td>{part.used_gib}</td>
-										<td>{part.free_gib}</td>
-										<td>{part.percent}%</td>
-									</tr>
-								{/each}
-							{/if}
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		{/if}
-
-		<!-- Processes Tab -->
-		{#if activeTab === 'processes'}
-			<div class="processes-container">
-				{#each sortedHostnames() as hostname}
-					{@const machine = getMachine(hostname)}
-					<div class="machine-card">
-						<h3>
-							{hostname}
-							{#if !machine}<span class="offline-badge">Offline</span>{/if}
-						</h3>
-						{#if machine}
-							<div class="proc-sections">
-								<div class="proc-section">
-									<h4>Top by CPU</h4>
-									<table class="proc-table">
-										<thead>
-											<tr>
-												<th>PID</th>
-												<th>User</th>
-												<th>CPU%</th>
-												<th>RAM (MiB)</th>
-												<th>Command</th>
-											</tr>
-										</thead>
-										<tbody>
-											{#each machine.processes.top_by_cpu as proc}
-												<tr>
-													<td>{proc.pid}</td>
-													<td>{proc.user}</td>
-													<td>{proc.cpu_percent.toFixed(1)}</td>
-													<td>{proc.ram_mib}</td>
-													<td class="command-cell" title={proc.command}
-														>{proc.command}</td
-													>
-												</tr>
-											{/each}
-										</tbody>
-									</table>
-								</div>
-								<div class="proc-section">
-									<h4>Top by Memory</h4>
-									<table class="proc-table">
-										<thead>
-											<tr>
-												<th>PID</th>
-												<th>User</th>
-												<th>CPU%</th>
-												<th>RAM (MiB)</th>
-												<th>Command</th>
-											</tr>
-										</thead>
-										<tbody>
-											{#each machine.processes.top_by_memory as proc}
-												<tr>
-													<td>{proc.pid}</td>
-													<td>{proc.user}</td>
-													<td>{proc.cpu_percent.toFixed(1)}</td>
-													<td>{proc.ram_mib}</td>
-													<td class="command-cell" title={proc.command}
-														>{proc.command}</td
-													>
-												</tr>
-											{/each}
-										</tbody>
-									</table>
-								</div>
-							</div>
-						{/if}
+			{#if loading}
+				<div class="flex items-center justify-center py-20">
+					<div class="flex items-center gap-3 text-muted-foreground">
+						<RefreshCw class="size-5 animate-spin" />
+						<span>Loading machine data...</span>
 					</div>
-				{/each}
-			</div>
-		{/if}
-	{/if}
+				</div>
+			{:else if !data}
+				{#if error}
+					<div class="text-center py-20">
+						<p class="text-destructive font-medium">{error}</p>
+					</div>
+				{:else}
+					<div class="text-center py-20 text-muted-foreground">No data available</div>
+				{/if}
+			{:else}
+				{#if error}
+					<div class="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+						{error} (showing last known data)
+					</div>
+				{/if}
+
+				<!-- GPU Tab -->
+				<TabsContent value="gpu" active={activeTab === 'gpu'}>
+					<Card class="py-0 gap-0 overflow-hidden">
+						<div class="overflow-x-auto">
+							<table class="w-full text-sm">
+								<thead>
+									<tr class="border-b bg-muted/50">
+										<th rowspan="2" class="text-left font-medium text-muted-foreground px-3 py-2.5 border-r sticky left-0 bg-muted/50 z-[1]">Machine</th>
+										<th rowspan="2" class="text-left font-medium text-muted-foreground px-3 py-2.5 border-r">GPU</th>
+										<th colspan="3" class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r border-b">Memory (MiB)</th>
+										<th colspan="2" class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r border-b">Utilization</th>
+										<th rowspan="2" class="text-center font-medium text-muted-foreground px-3 py-2.5 border-r">Temp</th>
+										<th colspan="2" class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r border-b">Clock (MHz)</th>
+										<th rowspan="2" class="text-center font-medium text-muted-foreground px-3 py-2.5 border-r">Power</th>
+										<th rowspan="2" class="text-center font-medium text-muted-foreground px-3 py-2.5">Driver</th>
+									</tr>
+									<tr class="border-b bg-muted/50">
+										<th class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r">Total</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r">Used</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r">Free</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r">GPU</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r">Mem</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r">Graphics</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r">Mem</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each sortedHostnames() as hostname}
+										{@const machine = getMachine(hostname)}
+										{#if !machine}
+											<tr class={cn("border-b transition-colors", statusRowBg('offline'))}>
+												<td class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit">{hostname}</td>
+												<td colspan="11" class="px-3 py-2 text-center italic text-status-offline-fg">Offline</td>
+											</tr>
+										{:else if !machine.gpu.available || machine.gpu.gpus.length === 0}
+											<tr class={cn("border-b transition-colors", statusRowBg('available'))}>
+												<td class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit">{hostname}</td>
+												<td colspan="11" class="px-3 py-2 text-center italic text-muted-foreground">No GPU</td>
+											</tr>
+										{:else}
+											{#each machine.gpu.gpus as gpu, gpuIdx}
+												{@const status = gpuStatusClass(gpu.memory.used_mib)}
+												<tr
+													class={cn(
+														"border-b transition-colors cursor-pointer hover:brightness-95",
+														statusRowBg(status)
+													)}
+													onclick={() => openGpuProcesses(hostname, gpuIdx, gpu.name, gpu.processes)}
+													title="Click to view running processes"
+												>
+													{#if gpuIdx === 0}
+														<td
+															rowspan={machine.gpu.gpus.length}
+															class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit border-r"
+														>
+															{hostname}
+														</td>
+													{/if}
+													<td class="px-3 py-2 text-left font-medium border-r">{gpu.name}</td>
+													<td class="px-3 py-2 text-center tabular-nums border-r">{gpu.memory.total_mib}</td>
+													<td class="px-3 py-2 text-center tabular-nums border-r">{gpu.memory.used_mib}</td>
+													<td class="px-3 py-2 text-center tabular-nums border-r">{gpu.memory.free_mib}</td>
+													<td class="px-3 py-2 text-center tabular-nums border-r">{gpu.utilization.gpu_percent}%</td>
+													<td class="px-3 py-2 text-center tabular-nums border-r">{gpu.utilization.memory_percent}%</td>
+													<td class="px-3 py-2 text-center tabular-nums border-r">{gpu.temperature_c}&deg;C</td>
+													<td class="px-3 py-2 text-center tabular-nums border-r">{gpu.clocks.graphics_mhz}</td>
+													<td class="px-3 py-2 text-center tabular-nums border-r">{gpu.clocks.memory_mhz}</td>
+													<td class="px-3 py-2 text-center tabular-nums border-r">
+														{gpu.power.usage_watts != null ? `${gpu.power.usage_watts}W` : 'N/A'}
+													</td>
+													<td class="px-3 py-2 text-center">{machine.gpu.driver_version ?? 'N/A'}</td>
+												</tr>
+											{/each}
+										{/if}
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					</Card>
+				</TabsContent>
+
+				<!-- CPU & RAM Tab -->
+				<TabsContent value="cpu" active={activeTab === 'cpu'}>
+					<Card class="py-0 gap-0 overflow-hidden">
+						<div class="overflow-x-auto">
+							<table class="w-full text-sm">
+								<thead>
+									<tr class="border-b bg-muted/50">
+										<th rowspan="2" class="text-left font-medium text-muted-foreground px-3 py-2.5 border-r sticky left-0 bg-muted/50 z-[1]">Machine</th>
+										<th colspan="4" class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r border-b">CPU</th>
+										<th colspan="4" class="text-center font-medium text-muted-foreground px-3 py-1.5 border-b">RAM (MiB)</th>
+									</tr>
+									<tr class="border-b bg-muted/50">
+										<th class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r">Usage</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r">Load (1m)</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r">Load (5m)</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r">Cores</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r">Total</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r">Used</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-1.5 border-r">Free</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-1.5">Cached</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each sortedHostnames() as hostname}
+										{@const machine = getMachine(hostname)}
+										{#if !machine}
+											<tr class={cn("border-b transition-colors", statusRowBg('offline'))}>
+												<td class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit">{hostname}</td>
+												<td colspan="8" class="px-3 py-2 text-center italic text-status-offline-fg">Offline</td>
+											</tr>
+										{:else}
+											{@const cpuStatus = cpuStatusClass(machine.cpu.percent)}
+											<tr class={cn("border-b transition-colors", statusRowBg(cpuStatus))}>
+												<td class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit border-r">{hostname}</td>
+												<td class="px-3 py-2 text-center tabular-nums border-r">{machine.cpu.percent}%</td>
+												<td class="px-3 py-2 text-center tabular-nums border-r">{machine.cpu.load_average['1min'].toFixed(1)}</td>
+												<td class="px-3 py-2 text-center tabular-nums border-r">{machine.cpu.load_average['5min'].toFixed(1)}</td>
+												<td class="px-3 py-2 text-center tabular-nums border-r">{machine.cpu.count_physical}/{machine.cpu.count_logical}</td>
+												<td class="px-3 py-2 text-center tabular-nums border-r">{machine.ram.total_mib.toLocaleString()}</td>
+												<td class={cn("px-3 py-2 text-center tabular-nums border-r", statusRowBg(ramStatusClass(machine)))}>
+													{machine.ram.used_mib.toLocaleString()}
+												</td>
+												<td class="px-3 py-2 text-center tabular-nums border-r">{machine.ram.free_mib.toLocaleString()}</td>
+												<td class="px-3 py-2 text-center tabular-nums">{machine.ram.cached_mib.toLocaleString()}</td>
+											</tr>
+										{/if}
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					</Card>
+				</TabsContent>
+
+				<!-- Disk Tab -->
+				<TabsContent value="disk" active={activeTab === 'disk'}>
+					<Card class="py-0 gap-0 overflow-hidden">
+						<div class="overflow-x-auto">
+							<table class="w-full text-sm">
+								<thead>
+									<tr class="border-b bg-muted/50">
+										<th class="text-left font-medium text-muted-foreground px-3 py-2.5 border-r sticky left-0 bg-muted/50 z-[1]">Machine</th>
+										<th class="text-left font-medium text-muted-foreground px-3 py-2.5 border-r">Mount</th>
+										<th class="text-left font-medium text-muted-foreground px-3 py-2.5 border-r">Device</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-2.5 border-r">FS</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-2.5 border-r">Total (GiB)</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-2.5 border-r">Used (GiB)</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-2.5 border-r">Free (GiB)</th>
+										<th class="text-center font-medium text-muted-foreground px-3 py-2.5">Usage</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each sortedHostnames() as hostname}
+										{@const machine = getMachine(hostname)}
+										{#if !machine}
+											<tr class={cn("border-b transition-colors", statusRowBg('offline'))}>
+												<td class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit">{hostname}</td>
+												<td colspan="7" class="px-3 py-2 text-center italic text-status-offline-fg">Offline</td>
+											</tr>
+										{:else}
+											{#each machine.disk.partitions as part, partIdx}
+												{@const dStatus = diskStatusClass(part.percent)}
+												<tr class={cn("border-b transition-colors", statusRowBg(dStatus))}>
+													{#if partIdx === 0}
+														<td
+															rowspan={machine.disk.partitions.length}
+															class="px-3 py-2 font-semibold text-left sticky left-0 z-[1] bg-inherit border-r"
+														>
+															{hostname}
+														</td>
+													{/if}
+													<td class="px-3 py-2 text-left font-mono text-xs border-r">{part.mountpoint}</td>
+													<td class="px-3 py-2 text-left font-mono text-xs border-r">{part.device}</td>
+													<td class="px-3 py-2 text-center border-r">{part.fstype}</td>
+													<td class="px-3 py-2 text-center tabular-nums border-r">{part.total_gib}</td>
+													<td class="px-3 py-2 text-center tabular-nums border-r">{part.used_gib}</td>
+													<td class="px-3 py-2 text-center tabular-nums border-r">{part.free_gib}</td>
+													<td class="px-3 py-2 text-center tabular-nums font-medium">
+														<span class={statusTextColor(dStatus)}>{part.percent}%</span>
+													</td>
+												</tr>
+											{/each}
+										{/if}
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					</Card>
+				</TabsContent>
+
+				<!-- Processes Tab -->
+				<TabsContent value="processes" active={activeTab === 'processes'}>
+					<div class="flex flex-col gap-4">
+						{#each sortedHostnames() as hostname}
+							{@const machine = getMachine(hostname)}
+							<Card>
+								<CardHeader class="pb-0">
+									<div class="flex items-center gap-2">
+										<CardTitle class="text-base">{hostname}</CardTitle>
+										{#if !machine}
+											<Badge class="bg-status-offline-bg text-status-offline-fg border-status-offline-fg/30">Offline</Badge>
+										{/if}
+									</div>
+								</CardHeader>
+								{#if machine}
+									<CardContent>
+										<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+											<div>
+												<h4 class="text-sm font-medium text-muted-foreground mb-2">Top by CPU</h4>
+												<div class="rounded-lg border overflow-hidden">
+													<table class="w-full text-sm">
+														<thead>
+															<tr class="border-b bg-muted/50">
+																<th class="text-left font-medium text-muted-foreground px-3 py-2">PID</th>
+																<th class="text-left font-medium text-muted-foreground px-3 py-2">User</th>
+																<th class="text-center font-medium text-muted-foreground px-3 py-2">CPU%</th>
+																<th class="text-center font-medium text-muted-foreground px-3 py-2">RAM (MiB)</th>
+																<th class="text-left font-medium text-muted-foreground px-3 py-2">Command</th>
+															</tr>
+														</thead>
+														<tbody>
+															{#each machine.processes.top_by_cpu as proc}
+																<tr class="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
+																	<td class="px-3 py-1.5 tabular-nums font-mono text-xs">{proc.pid}</td>
+																	<td class="px-3 py-1.5">{proc.user}</td>
+																	<td class="px-3 py-1.5 text-center tabular-nums">{proc.cpu_percent.toFixed(1)}</td>
+																	<td class="px-3 py-1.5 text-center tabular-nums">{proc.ram_mib}</td>
+																	<td class="px-3 py-1.5 max-w-[300px] truncate font-mono text-xs" title={proc.command}>{proc.command}</td>
+																</tr>
+															{/each}
+														</tbody>
+													</table>
+												</div>
+											</div>
+											<div>
+												<h4 class="text-sm font-medium text-muted-foreground mb-2">Top by Memory</h4>
+												<div class="rounded-lg border overflow-hidden">
+													<table class="w-full text-sm">
+														<thead>
+															<tr class="border-b bg-muted/50">
+																<th class="text-left font-medium text-muted-foreground px-3 py-2">PID</th>
+																<th class="text-left font-medium text-muted-foreground px-3 py-2">User</th>
+																<th class="text-center font-medium text-muted-foreground px-3 py-2">CPU%</th>
+																<th class="text-center font-medium text-muted-foreground px-3 py-2">RAM (MiB)</th>
+																<th class="text-left font-medium text-muted-foreground px-3 py-2">Command</th>
+															</tr>
+														</thead>
+														<tbody>
+															{#each machine.processes.top_by_memory as proc}
+																<tr class="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
+																	<td class="px-3 py-1.5 tabular-nums font-mono text-xs">{proc.pid}</td>
+																	<td class="px-3 py-1.5">{proc.user}</td>
+																	<td class="px-3 py-1.5 text-center tabular-nums">{proc.cpu_percent.toFixed(1)}</td>
+																	<td class="px-3 py-1.5 text-center tabular-nums">{proc.ram_mib}</td>
+																	<td class="px-3 py-1.5 max-w-[300px] truncate font-mono text-xs" title={proc.command}>{proc.command}</td>
+																</tr>
+															{/each}
+														</tbody>
+													</table>
+												</div>
+											</div>
+										</div>
+									</CardContent>
+								{/if}
+							</Card>
+						{/each}
+					</div>
+				</TabsContent>
+			{/if}
+		</Tabs>
+	</main>
 </div>
 
 <!-- GPU Process Modal -->
-{#if showModal}
-	<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
-	<div class="modal-backdrop" onclick={handleBackdropClick}>
-		<div class="modal" role="dialog" aria-label="GPU Process Details">
-			<div class="modal-header">
-				<h2>{selectedGpuLabel}</h2>
-				<button class="close-btn" onclick={closeModal} aria-label="Close">&times;</button>
-			</div>
-			<div class="modal-body">
-				{#if selectedGpuProcs.length === 0}
-					<p class="no-procs">No running processes on this GPU.</p>
-				{:else}
-					<table class="proc-table">
+<Dialog bind:open={showModal} onClose={closeModal}>
+	<DialogContent class="max-w-3xl">
+		<DialogHeader class="flex-row items-center justify-between">
+			<DialogTitle>{selectedGpuLabel}</DialogTitle>
+			<Button variant="ghost" size="icon" onclick={closeModal} class="size-8 shrink-0">
+				<X class="size-4" />
+			</Button>
+		</DialogHeader>
+		<div class="p-6 pt-4 overflow-auto">
+			{#if selectedGpuProcs.length === 0}
+				<p class="text-muted-foreground text-center py-6">No running processes on this GPU.</p>
+			{:else}
+				<div class="rounded-lg border overflow-hidden">
+					<table class="w-full text-sm">
 						<thead>
-							<tr>
-								<th>PID</th>
-								<th>User</th>
-								<th>Type</th>
-								<th>GPU Mem (MiB)</th>
-								<th>CPU%</th>
-								<th>RAM (MiB)</th>
-								<th>Command</th>
+							<tr class="border-b bg-muted/50">
+								<th class="text-left font-medium text-muted-foreground px-3 py-2">PID</th>
+								<th class="text-left font-medium text-muted-foreground px-3 py-2">User</th>
+								<th class="text-center font-medium text-muted-foreground px-3 py-2">Type</th>
+								<th class="text-center font-medium text-muted-foreground px-3 py-2">GPU Mem (MiB)</th>
+								<th class="text-center font-medium text-muted-foreground px-3 py-2">CPU%</th>
+								<th class="text-center font-medium text-muted-foreground px-3 py-2">RAM (MiB)</th>
+								<th class="text-left font-medium text-muted-foreground px-3 py-2">Command</th>
 							</tr>
 						</thead>
 						<tbody>
 							{#each selectedGpuProcs as proc}
-								<tr>
-									<td>{proc.pid}</td>
-									<td>{proc.user}</td>
-									<td>{proc.type}</td>
-									<td>{proc.gpu_memory_mib}</td>
-									<td>{proc.cpu_percent.toFixed(1)}</td>
-									<td>{proc.ram_mib}</td>
-									<td class="command-cell" title={proc.command}>{proc.command}</td>
+								<tr class="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
+									<td class="px-3 py-2 tabular-nums font-mono text-xs">{proc.pid}</td>
+									<td class="px-3 py-2">{proc.user}</td>
+									<td class="px-3 py-2 text-center">
+										<Badge variant="outline">{proc.type}</Badge>
+									</td>
+									<td class="px-3 py-2 text-center tabular-nums">{proc.gpu_memory_mib}</td>
+									<td class="px-3 py-2 text-center tabular-nums">{proc.cpu_percent.toFixed(1)}</td>
+									<td class="px-3 py-2 text-center tabular-nums">{proc.ram_mib}</td>
+									<td class="px-3 py-2 max-w-[300px] truncate font-mono text-xs" title={proc.command}>{proc.command}</td>
 								</tr>
 							{/each}
 						</tbody>
 					</table>
-				{/if}
-			</div>
+				</div>
+			{/if}
 		</div>
-	</div>
-{/if}
-
-<style>
-	.page {
-		max-width: 100%;
-		padding: 1.5rem 2rem;
-	}
-
-	header {
-		margin-bottom: 1.5rem;
-	}
-
-	.back-link {
-		font-size: 0.9rem;
-		color: var(--color-text-muted);
-	}
-
-	h1 {
-		margin: 0.5rem 0 0.25rem;
-		font-size: 1.8rem;
-	}
-
-	.last-updated {
-		margin: 0 0 0.5rem;
-		font-size: 0.85rem;
-		color: var(--color-text-muted);
-	}
-
-	.legend {
-		display: flex;
-		gap: 1rem;
-		margin-top: 0.5rem;
-		font-size: 0.85rem;
-	}
-
-	.legend-item {
-		padding: 0.2rem 0.75rem;
-		border-radius: 4px;
-		font-weight: 500;
-	}
-
-	.legend-item.available {
-		background: var(--color-available);
-		border: 1px solid var(--color-available-border);
-	}
-
-	.legend-item.inuse {
-		background: var(--color-inuse);
-		border: 1px solid var(--color-inuse-border);
-	}
-
-	.legend-item.unavailable {
-		background: var(--color-unavailable);
-		border: 1px solid var(--color-unavailable-border);
-		color: var(--color-unavailable-text);
-	}
-
-	.legend-item.offline {
-		background: #e0e0e0;
-		border: 1px solid #bbb;
-		color: #666;
-	}
-
-	/* Tabs */
-	.tabs {
-		display: flex;
-		gap: 0;
-		margin-bottom: 1.5rem;
-		border-bottom: 2px solid var(--color-border);
-	}
-
-	.tabs button {
-		padding: 0.6rem 1.5rem;
-		border: none;
-		background: none;
-		font-size: 0.95rem;
-		font-weight: 500;
-		color: var(--color-text-muted);
-		cursor: pointer;
-		border-bottom: 2px solid transparent;
-		margin-bottom: -2px;
-		transition:
-			color 0.15s,
-			border-color 0.15s;
-	}
-
-	.tabs button:hover {
-		color: var(--color-text);
-	}
-
-	.tabs button.active {
-		color: var(--color-primary, #4361ee);
-		border-bottom-color: var(--color-primary, #4361ee);
-	}
-
-	.status-msg {
-		text-align: center;
-		font-size: 1.1rem;
-		color: var(--color-text-muted);
-		margin-top: 4rem;
-	}
-
-	.status-msg.error {
-		color: var(--color-unavailable-text);
-	}
-
-	/* Tables */
-	.table-wrapper {
-		overflow-x: auto;
-		background: var(--color-surface);
-		border-radius: var(--radius);
-		box-shadow: var(--shadow);
-		border: 1px solid var(--color-border);
-	}
-
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 0.82rem;
-		white-space: nowrap;
-	}
-
-	thead th {
-		background: #f1f3f5;
-		font-weight: 600;
-		text-align: center;
-		padding: 0.6rem 0.8rem;
-		border: 1px solid var(--color-border);
-		position: sticky;
-		top: 0;
-		z-index: 1;
-	}
-
-	tbody td {
-		text-align: center;
-		padding: 0.5rem 0.75rem;
-		border: 1px solid var(--color-border);
-	}
-
-	tbody th.machine-name {
-		text-align: left;
-		font-weight: 600;
-		padding: 0.5rem 0.75rem;
-		border: 1px solid var(--color-border);
-		background: #f8f9fa;
-		vertical-align: middle;
-	}
-
-	.gpu-name {
-		text-align: left !important;
-		font-weight: 500;
-	}
-
-	tr.available td {
-		background: var(--color-available);
-	}
-
-	tr.inuse td {
-		background: var(--color-inuse);
-	}
-
-	tr.unavailable td {
-		background: var(--color-unavailable);
-		color: var(--color-unavailable-text);
-	}
-
-	tr.offline td {
-		background: #e9ecef;
-		color: #666;
-	}
-
-	.offline-cell,
-	.no-gpu-cell {
-		text-align: center !important;
-		font-style: italic;
-		color: #888;
-	}
-
-	tbody tr {
-		cursor: pointer;
-		transition: filter 0.15s ease;
-	}
-
-	tbody tr:hover td {
-		filter: brightness(0.95);
-	}
-
-	/* Processes tab */
-	.processes-container {
-		display: flex;
-		flex-direction: column;
-		gap: 1.5rem;
-	}
-
-	.machine-card {
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		box-shadow: var(--shadow);
-		padding: 1rem 1.25rem;
-	}
-
-	.machine-card h3 {
-		margin: 0 0 0.75rem;
-		font-size: 1rem;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.offline-badge {
-		font-size: 0.75rem;
-		background: #e0e0e0;
-		color: #666;
-		padding: 0.15rem 0.5rem;
-		border-radius: 4px;
-		font-weight: 400;
-	}
-
-	.proc-sections {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1rem;
-	}
-
-	@media (max-width: 900px) {
-		.proc-sections {
-			grid-template-columns: 1fr;
-		}
-	}
-
-	.proc-section h4 {
-		margin: 0 0 0.5rem;
-		font-size: 0.85rem;
-		color: var(--color-text-muted);
-	}
-
-	/* Shared proc table styles */
-	.proc-table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 0.82rem;
-	}
-
-	.proc-table th {
-		background: #f1f3f5;
-		font-weight: 600;
-		text-align: left;
-		padding: 0.5rem 0.6rem;
-		border: 1px solid var(--color-border);
-	}
-
-	.proc-table td {
-		text-align: left;
-		padding: 0.4rem 0.6rem;
-		border: 1px solid var(--color-border);
-	}
-
-	.command-cell {
-		max-width: 300px;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	/* Modal */
-	.modal-backdrop {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.4);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 100;
-		padding: 2rem;
-	}
-
-	.modal {
-		background: var(--color-surface);
-		border-radius: var(--radius);
-		box-shadow: var(--shadow-lg);
-		max-width: 900px;
-		width: 100%;
-		max-height: 80vh;
-		display: flex;
-		flex-direction: column;
-		overflow: hidden;
-	}
-
-	.modal-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 1rem 1.25rem;
-		border-bottom: 1px solid var(--color-border);
-	}
-
-	.modal-header h2 {
-		margin: 0;
-		font-size: 1.1rem;
-	}
-
-	.close-btn {
-		background: none;
-		border: none;
-		font-size: 1.5rem;
-		cursor: pointer;
-		color: var(--color-text-muted);
-		padding: 0 0.25rem;
-		line-height: 1;
-	}
-
-	.close-btn:hover {
-		color: var(--color-text);
-	}
-
-	.modal-body {
-		padding: 1rem 1.25rem;
-		overflow: auto;
-	}
-
-	.no-procs {
-		color: var(--color-text-muted);
-		text-align: center;
-		padding: 1rem 0;
-	}
-</style>
+	</DialogContent>
+</Dialog>
