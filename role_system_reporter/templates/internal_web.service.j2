@@ -1,0 +1,20 @@
+[Unit]
+Description=Internal Web Page - SvelteKit lab status dashboard
+After=network-online.target redis-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ansible
+Environment=REDIS_URL=redis://localhost:{{ system_reporter_redis_port }}
+Environment=KNOWN_MACHINES={{ groups['labservers'] | join(',') }}
+ExecStart=/usr/bin/node {{ internal_webpage_dir }}/build
+WorkingDirectory={{ internal_webpage_dir }}
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=internal_web
+
+[Install]
+WantedBy=multi-user.target

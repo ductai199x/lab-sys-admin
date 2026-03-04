@@ -11,3 +11,10 @@
   ansible.builtin.systemd:
     name: redis-server
     state: restarted
+
+- name: restart internal_web
+  become: true
+  ansible.builtin.systemd:
+    name: internal_web
+    state: restarted
+    daemon_reload: true

@@ -30,20 +30,6 @@
     - "internal-web-page-svelte/vite.config.ts"
     - "internal-web-page-svelte/.npmrc"
 
-- name: Get previous npm/node/forever processes
-  become: true
-  community.general.pids:
-    pattern: (node|npm|forever)\s+(.*)\s+start.*
-  register: npm_run_start_pids
-
-- name: Stop existing web server processes
-  become: true
-  ansible.builtin.command:
-    cmd: "kill {{ item }}"
-  with_items: "{{ npm_run_start_pids.pids }}"
-  failed_when: false
-  changed_when: false
-
 - name: Run npm install
   ansible.builtin.shell:
     cmd: "cd {{ internal_webpage_dir }} && npm install"
@@ -52,17 +38,22 @@
 - name: Run npm build
   ansible.builtin.shell:
     cmd: "cd {{ internal_webpage_dir }} && npm run build"
-  environment:
-    REDIS_URL: "redis://localhost:{{ system_reporter_redis_port }}"
-    KNOWN_MACHINES: "{{ groups['labservers'] | join(',') }}"
   changed_when: true
 
-- name: Start webapp with forever
-  ansible.builtin.shell:
-    cmd: >-
-      cd {{ internal_webpage_dir }} &&
-      REDIS_URL="redis://localhost:{{ system_reporter_redis_port }}"
-      KNOWN_MACHINES="{{ groups['labservers'] | join(',') }}"
-      ./node_modules/forever/bin/forever start -c 'npm run start' ./
-    executable: /bin/bash
-  changed_when: true
+- name: Deploy systemd unit file for internal web
+  become: true
+  ansible.builtin.template:
+    src: internal_web.service.j2
+    dest: /etc/systemd/system/internal_web.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart internal_web
+
+- name: Enable and start internal web service
+  become: true
+  ansible.builtin.systemd:
+    name: internal_web
+    enabled: true
+    state: started
+    daemon_reload: true
