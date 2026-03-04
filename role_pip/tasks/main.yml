@@ -75,8 +75,8 @@
 
 - name: Set fact for pip version and its executable path
   ansible.builtin.set_fact:
-    pip_version: "{{ new_pip_version if pip_need_install else pip_version }}"
-    pip_executable: "{{ new_pip_executable if pip_need_install else pip_executable }}"
+    pip_version: "{{ new_pip_version if (pip_need_install and new_pip_version is defined) else pip_version }}"
+    pip_executable: "{{ new_pip_executable if (pip_need_install and new_pip_executable is defined) else pip_executable }}"
     cacheable: "yes"
 
 - name: Install necessary pip packages # noqa: package-latest

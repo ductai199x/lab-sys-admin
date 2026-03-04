@@ -32,7 +32,7 @@ class RedisPublisher:
             self._connect()
             self._client.setex(key, ttl, json.dumps(data))
             logger.info("Published to %s (TTL=%ds)", key, ttl)
-        except redis.RedisError as e:
+        except Exception as e:
             logger.error("Failed to publish to Redis: %s", e)
             self._client = None
             raise

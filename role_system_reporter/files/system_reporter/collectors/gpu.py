@@ -79,6 +79,7 @@ def collect_gpu():
                 for p in nvmlDeviceGetGraphicsRunningProcesses(handle):
                     if p.pid in procs:
                         procs[p.pid]["type"] = "compute+graphics"
+                        procs[p.pid]["gpu_memory_mib"] += round((p.usedGpuMemory or 0) / 1048576, 1)
                     else:
                         procs[p.pid] = {
                             "gpu_memory_mib": round((p.usedGpuMemory or 0) / 1048576, 1),

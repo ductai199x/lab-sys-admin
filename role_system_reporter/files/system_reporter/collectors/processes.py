@@ -12,7 +12,7 @@ def collect_processes(top_n=10):
     for p in psutil.process_iter(["pid", "username", "name", "cmdline", "cpu_percent", "memory_info"]):
         try:
             info = p.info
-            if info["username"] in SYSTEM_USERS:
+            if info["username"] is None or info["username"] in SYSTEM_USERS:
                 continue
             procs.append({
                 "pid": info["pid"],
@@ -22,7 +22,7 @@ def collect_processes(top_n=10):
                 "cpu_percent": info["cpu_percent"] or 0.0,
                 "ram_mib": round((info["memory_info"].rss if info["memory_info"] else 0) / 1048576, 1),
             })
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
+        except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError):
             continue
 
     by_cpu = sorted(procs, key=lambda p: p["cpu_percent"], reverse=True)[:top_n]

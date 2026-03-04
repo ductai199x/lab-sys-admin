@@ -40,10 +40,14 @@
 	}
 
 	function timeSince(timestamp: string): string {
-		const seconds = Math.floor((Date.now() - new Date(timestamp).getTime()) / 1000);
+		const time = new Date(timestamp).getTime();
+		if (isNaN(time)) return 'unknown';
+		const seconds = Math.floor((Date.now() - time) / 1000);
+		if (seconds < 0) return 'just now';
 		if (seconds < 60) return `${seconds}s ago`;
 		if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-		return `${Math.floor(seconds / 3600)}h ago`;
+		if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+		return `${Math.floor(seconds / 86400)}d ago`;
 	}
 
 	function gpuStatusClass(usedMib: number): string {
@@ -63,6 +67,7 @@
 	}
 
 	function ramStatusClass(machine: MachineData): string {
+		if (machine.ram.total_mib === 0) return 'unavailable';
 		const pct = (machine.ram.used_mib / machine.ram.total_mib) * 100;
 		if (pct > 90) return 'unavailable';
 		if (pct > 70) return 'inuse';
@@ -129,11 +134,16 @@
 
 	{#if loading}
 		<p class="status-msg">Loading...</p>
-	{:else if error}
-		<p class="status-msg error">{error}</p>
 	{:else if !data}
-		<p class="status-msg">No data available</p>
+		{#if error}
+			<p class="status-msg error">{error}</p>
+		{:else}
+			<p class="status-msg">No data available</p>
+		{/if}
 	{:else}
+		{#if error}
+			<p class="status-msg error">{error} (showing last known data)</p>
+		{/if}
 		<!-- GPU Tab -->
 		{#if activeTab === 'gpu'}
 			<div class="table-wrapper">

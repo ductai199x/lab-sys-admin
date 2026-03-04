@@ -1,7 +1,7 @@
 #!/bin/bash
 
-target=$([ -z $1 ] && echo "labservers" || echo "$1")
-user=$([ -z $2 ] && echo "admin" || echo "$2")
+target=$([ -z "$1" ] && echo "labservers" || echo "$1")
+user=$([ -z "$2" ] && echo "admin" || echo "$2")
 
 ansible-playbook -i hosts main-playbook.yml \
   -e "is_install_pip_packages=True" \

@@ -19,7 +19,7 @@
 
     - name: Grab current PATH environment variable
       ansible.builtin.shell:
-        cmd: source .zshrc && echo $PATH
+        cmd: source ~/.zshrc && echo $PATH
       args:
         executable: /usr/bin/zsh
       register: env_path

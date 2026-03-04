@@ -60,8 +60,8 @@
   ansible.builtin.shell:
     cmd: >-
       cd {{ internal_webpage_dir }} &&
-      REDIS_URL=redis://localhost:{{ system_reporter_redis_port }}
-      KNOWN_MACHINES={{ groups['labservers'] | join(',') }}
+      REDIS_URL="redis://localhost:{{ system_reporter_redis_port }}"
+      KNOWN_MACHINES="{{ groups['labservers'] | join(',') }}"
       ./node_modules/forever/bin/forever start -c 'npm run start' ./
     executable: /bin/bash
   changed_when: true

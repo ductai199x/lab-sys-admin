@@ -1,8 +1,8 @@
 #!/bin/bash
 
-target=$([ -z $1 ] && echo "labservers" || echo "$1")
+target=$([ -z "$1" ] && echo "labservers" || echo "$1")
 
-rebuild_webpage=$([ -z $2 ] && echo "False" || echo "True")
+rebuild_webpage=$([ -z "$2" ] && echo "False" || echo "True")
 
 ansible-playbook -i hosts main-playbook.yml \
   -e "is_get_gpu_info=True" \

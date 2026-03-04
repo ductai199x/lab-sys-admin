@@ -216,7 +216,10 @@
 
     - name: Start the webpage using `forever`
       ansible.builtin.shell:
-        cmd: "cd {{ internal_webpage_dir }} && ./node_modules/forever/bin/forever start -c 'npm run start' ./"
+        cmd: >-
+          cd {{ internal_webpage_dir }} &&
+          KNOWN_MACHINES="{{ groups['labservers'] | join(',') }}"
+          ./node_modules/forever/bin/forever start -c 'npm run start' ./
         executable: /bin/bash
       delegate_to: "{{ groups['lab_internal_web_host'][0] }}"
       run_once: true
