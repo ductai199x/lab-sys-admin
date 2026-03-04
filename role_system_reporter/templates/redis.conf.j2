@@ -1,7 +1,7 @@
 # Redis configuration for system_reporter
-bind 0.0.0.0
+bind 127.0.0.1 {{ system_reporter_redis_bind_address }}
 port {{ system_reporter_redis_port }}
-protected-mode no
+protected-mode yes
 maxmemory {{ system_reporter_redis_maxmemory }}
 maxmemory-policy allkeys-lru
 save ""

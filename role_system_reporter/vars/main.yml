@@ -1,6 +1,2 @@
 ---
 # vars for role_system_reporter
-system_reporter_pip_packages:
-  - psutil>=5.9.0
-  - nvidia-ml-py>=12.0.0
-  - redis>=5.0.0

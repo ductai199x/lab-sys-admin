@@ -1,6 +1,6 @@
 #!/bin/bash
 
-target=$([ -z $1 ] && echo "labservers" || echo "$1")
+target=$([ -z "$1" ] && echo "labservers" || echo "$1")
 
 ansible-playbook -i hosts create-user-playbook.yml \
   -e "ansible_ssh_user={{ _ansbl_username }}" \

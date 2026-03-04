@@ -4,7 +4,7 @@
 - name: Fix-broken installs in-case something need to be fixed before update upgrade
   become: true
   ansible.builtin.shell:
-    cmd: set -o pipefail && echo "Y" | sudo apt --fix-broken install
+    cmd: set -o pipefail && echo "Y" | apt --fix-broken install
   changed_when: false
   failed_when: false
   retries: 1
@@ -16,7 +16,7 @@
   become: true
   ansible.builtin.apt:
     update_cache: true
-    upgrade: true
+    upgrade: "safe"
   retries: 5
   delay: 10
   register: result
@@ -35,8 +35,8 @@
 - name: Make sure python3.x ppa is present
   become: true
   ansible.builtin.apt_repository:
-    filename: "deadsnakes-ubuntu-ppa-jammy"
-    repo: "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/deadsnakes-ubuntu-ppa.gpg] http://ppa.launchpad.net/deadsnakes/ppa/ubuntu jammy main"
+    filename: "deadsnakes-ubuntu-ppa-{{ ansible_distribution_release }}"
+    repo: "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/deadsnakes-ubuntu-ppa.gpg] http://ppa.launchpad.net/deadsnakes/ppa/ubuntu {{ ansible_distribution_release }} main"
     state: present
   retries: 3
   delay: 5

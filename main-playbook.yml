@@ -7,11 +7,6 @@
     - vars/secrets.yml
 
   tasks:
-    - name: Set fact for unreachable_hosts
-      ansible.builtin.set_fact:
-        unreachable_hosts: "{{ ansible_play_hosts_all | difference(ansible_play_hosts) }}"
-        cacheable: "yes"
-
     - name: Include the role_apt
       ansible.builtin.include_role:
         name: role_apt
@@ -19,7 +14,7 @@
 
     - name: Grab current PATH environment variable
       ansible.builtin.shell:
-        cmd: source .zshrc && echo $PATH
+        cmd: source ~/.zshrc && echo $PATH
       args:
         executable: /usr/bin/zsh
       register: env_path
@@ -39,11 +34,6 @@
       ansible.builtin.include_role:
         name: role_pip
       when: is_install_pip_packages | bool
-
-    - name: Include the role_gpu
-      ansible.builtin.include_role:
-        name: role_gpu
-      when: is_get_gpu_info | bool
 
     - name: Include the role_unattended_upgrade
       ansible.builtin.include_role:

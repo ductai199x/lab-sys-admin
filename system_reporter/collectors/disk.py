@@ -19,6 +19,6 @@ def collect_disk():
                 "free_gib": round(usage.free / (1024 ** 3), 1),
                 "percent": usage.percent,
             })
-        except PermissionError:
+        except OSError:
             continue
     return {"partitions": partitions}
