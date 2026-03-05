@@ -4,11 +4,9 @@
 	import { RefreshCw } from 'lucide-svelte';
 	import { cn } from '$lib/utils';
 	import { untrack, tick } from 'svelte';
+	import { getActivePage, setAlertCount } from '$lib/lab-state.svelte';
 
-	type PageId = 'overview' | 'gpu' | 'cpu' | 'disk' | 'processes' | 'alerts';
 	type Status = 'available' | 'inuse' | 'critical' | 'offline';
-
-	let activePage: PageId = $state('overview');
 
 	let data: MachinesResponse | null = $state(null);
 	let loading = $state(true);
@@ -51,15 +49,6 @@
 		function onRefresh() { fetchData(); }
 		window.addEventListener('lab-refresh', onRefresh);
 		return () => window.removeEventListener('lab-refresh', onRefresh);
-	});
-
-	// Listen for page changes from layout
-	$effect(() => {
-		function onPageChange(e: Event) {
-			activePage = (e as CustomEvent<PageId>).detail;
-		}
-		window.addEventListener('lab-page-change', onPageChange);
-		return () => window.removeEventListener('lab-page-change', onPageChange);
 	});
 
 	// ─── Helpers ───
@@ -244,11 +233,10 @@
 		return alerts;
 	}
 
-	// Update alert count in layout
+	// Update alert count in shared state
 	$effect(() => {
 		if (data) {
-			const count = getAlerts().length;
-			window.dispatchEvent(new CustomEvent('lab-alert-count', { detail: count }));
+			setAlertCount(getAlerts().length);
 		}
 	});
 
@@ -293,7 +281,7 @@
 	{/if}
 
 	<!-- ═══════════ Overview ═══════════ -->
-	<div class={activePage === 'overview' ? '' : 'hidden'}>
+	<div class={getActivePage() === 'overview' ? '' : 'hidden'}>
 		<!-- Stat Cards -->
 		{#if data}
 			{@const online = getOnlineMachines()}
@@ -419,7 +407,7 @@
 	</div>
 
 	<!-- ═══════════ GPU ═══════════ -->
-	<div class={activePage === 'gpu' ? '' : 'hidden'}>
+	<div class={getActivePage() === 'gpu' ? '' : 'hidden'}>
 		<div class="flex flex-wrap gap-2 mb-5">
 			<Badge class="bg-status-available-bg text-status-available border-status-available/30">Available</Badge>
 			<Badge class="bg-status-inuse-bg text-status-inuse border-status-inuse/30">In Use</Badge>
@@ -497,7 +485,7 @@
 	</div>
 
 	<!-- ═══════════ CPU & RAM ═══════════ -->
-	<div class={activePage === 'cpu' ? '' : 'hidden'}>
+	<div class={getActivePage() === 'cpu' ? '' : 'hidden'}>
 		<div class="flex flex-wrap gap-2 mb-5">
 			<Badge class="bg-status-available-bg text-status-available border-status-available/30">Available</Badge>
 			<Badge class="bg-status-inuse-bg text-status-inuse border-status-inuse/30">In Use</Badge>
@@ -560,7 +548,7 @@
 	</div>
 
 	<!-- ═══════════ Disk ═══════════ -->
-	<div class={activePage === 'disk' ? '' : 'hidden'}>
+	<div class={getActivePage() === 'disk' ? '' : 'hidden'}>
 		<div class="flex flex-wrap gap-2 mb-5">
 			<Badge class="bg-status-available-bg text-status-available border-status-available/30">Available</Badge>
 			<Badge class="bg-status-inuse-bg text-status-inuse border-status-inuse/30">In Use</Badge>
@@ -623,7 +611,7 @@
 	</div>
 
 	<!-- ═══════════ Processes ═══════════ -->
-	<div class={activePage === 'processes' ? '' : 'hidden'}>
+	<div class={getActivePage() === 'processes' ? '' : 'hidden'}>
 		{#each sortedHostnames() as hostname}
 			{@const machine = getMachine(hostname)}
 			<div class="bg-card border border-border rounded-2xl shadow-[0_1px_3px_rgba(26,29,35,0.04),0_4px_12px_rgba(26,29,35,0.03)] mb-4 overflow-hidden">
@@ -678,7 +666,7 @@
 	</div>
 
 	<!-- ═══════════ Alerts ═══════════ -->
-	<div class={activePage === 'alerts' ? '' : 'hidden'}>
+	<div class={getActivePage() === 'alerts' ? '' : 'hidden'}>
 		{#if data}
 		{@const alerts = getAlerts()}
 		{#if alerts.length === 0}

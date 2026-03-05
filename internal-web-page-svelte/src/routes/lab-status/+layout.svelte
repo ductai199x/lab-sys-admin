@@ -12,14 +12,10 @@
 	} from 'lucide-svelte';
 	import { cn } from '$lib/utils';
 	import { initTheme, toggleTheme, isDark } from '$lib/theme.svelte';
+	import { type PageId, getActivePage, setActivePage, getAlertCount } from '$lib/lab-state.svelte';
 	import { onMount } from 'svelte';
 
 	let { children } = $props();
-
-	type PageId = 'overview' | 'gpu' | 'cpu' | 'disk' | 'processes' | 'alerts';
-
-	let activePage: PageId = $state('overview');
-	let alertCount = $state(0);
 
 	const pageTitles: Record<PageId, string> = {
 		overview: 'Overview',
@@ -39,10 +35,6 @@
 		{ id: 'alerts', label: 'Alerts', section: 'system' }
 	];
 
-	function setPage(page: PageId) {
-		activePage = page;
-	}
-
 	function handleRefresh() {
 		window.dispatchEvent(new CustomEvent('lab-refresh'));
 	}
@@ -50,24 +42,10 @@
 	onMount(() => {
 		initTheme();
 	});
-
-	// Listen for alert count updates from child
-	$effect(() => {
-		function onAlertCount(e: Event) {
-			alertCount = (e as CustomEvent<number>).detail;
-		}
-		window.addEventListener('lab-alert-count', onAlertCount);
-		return () => window.removeEventListener('lab-alert-count', onAlertCount);
-	});
-
-	// Expose activePage to children via custom event
-	$effect(() => {
-		window.dispatchEvent(new CustomEvent('lab-page-change', { detail: activePage }));
-	});
 </script>
 
 <svelte:head>
-	<title>{pageTitles[activePage]} - MISL Lab Dashboard</title>
+	<title>{pageTitles[getActivePage()]} - MISL Lab Dashboard</title>
 </svelte:head>
 
 <div class="flex min-h-screen">
@@ -90,11 +68,11 @@
 				<button
 					class={cn(
 						'flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] text-sm font-medium w-full text-left transition-all duration-150 cursor-pointer',
-						activePage === item.id
+						getActivePage() === item.id
 							? 'bg-sidebar-active text-sidebar-text-active'
 							: 'text-sidebar-text hover:bg-sidebar-hover hover:text-[#d0d3da]'
 					)}
-					onclick={() => setPage(item.id)}
+					onclick={() => setActivePage(item.id)}
 				>
 					{#if item.id === 'overview'}
 						<LayoutGrid class="size-[18px] shrink-0" />
@@ -118,17 +96,17 @@
 				<button
 					class={cn(
 						'flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] text-sm font-medium w-full text-left transition-all duration-150 cursor-pointer',
-						activePage === item.id
+						getActivePage() === item.id
 							? 'bg-sidebar-active text-sidebar-text-active'
 							: 'text-sidebar-text hover:bg-sidebar-hover hover:text-[#d0d3da]'
 					)}
-					onclick={() => setPage(item.id)}
+					onclick={() => setActivePage(item.id)}
 				>
 					<Bell class="size-[18px] shrink-0" />
 					{item.label}
-					{#if item.id === 'alerts' && alertCount > 0}
+					{#if item.id === 'alerts' && getAlertCount() > 0}
 						<span class="ml-auto bg-red-card text-white text-[10px] font-bold py-px px-[7px] rounded-full min-w-[20px] text-center">
-							{alertCount}
+							{getAlertCount()}
 						</span>
 					{/if}
 				</button>
@@ -163,7 +141,7 @@
 	<div class="flex-1 ml-[220px] min-h-screen max-md:ml-0">
 		<!-- Top Bar -->
 		<header class="flex items-center gap-4 px-8 py-4 bg-background border-b border-border-light sticky top-0 z-40">
-			<div class="text-[22px] font-extrabold tracking-tight flex-1">{pageTitles[activePage]}</div>
+			<div class="text-[22px] font-extrabold tracking-tight flex-1">{pageTitles[getActivePage()]}</div>
 			<div class="flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-card text-sm text-muted-foreground min-w-[260px]">
 				<svg class="size-4 opacity-40 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
 				<input type="text" placeholder="Search machines, users, processes..." class="border-none bg-transparent outline-none font-sans text-sm text-foreground w-full placeholder:text-muted-foreground" />
