@@ -288,7 +288,7 @@
 			{@const totalGpus = getTotalGpus()}
 			{@const freeGpus = getFreeGpus()}
 			{@const critMachines = getCriticalMachines()}
-			<div class="grid grid-cols-4 gap-4 mb-7 max-md:grid-cols-2">
+			<div class="grid grid-cols-4 gap-4 mb-7 max-lg:grid-cols-2 max-sm:grid-cols-1">
 				<div class="bg-green-card rounded-2xl p-5 text-white relative overflow-hidden animate-[cardIn_0.4s_ease-out_both]">
 					<div class="absolute -top-5 -right-5 w-20 h-20 rounded-full bg-white/10"></div>
 					<div class="text-[13px] font-semibold opacity-90 mb-1">Machines Online</div>
@@ -327,7 +327,7 @@
 			<div class="text-[13px] text-muted-foreground">Click GPU rows in detail pages for process info</div>
 		</div>
 
-		<div class="grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-4 mb-7 max-md:grid-cols-1">
+		<div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 mb-7 max-sm:grid-cols-1">
 			{#each sortedHostnames() as hostname, idx}
 				{@const machine = getMachine(hostname)}
 				{@const st = machine ? overallStatus(machine) : 'offline'}
@@ -704,14 +704,14 @@
 {#if showModal}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="fixed inset-0 z-[100] bg-[rgba(26,29,35,0.4)] backdrop-blur-[6px] flex items-center justify-center p-5"
+		class="fixed inset-0 z-[100] bg-[rgba(26,29,35,0.4)] backdrop-blur-[6px] flex items-center justify-center p-5 max-sm:p-2"
 		id="gpu-modal-backdrop"
 		role="dialog"
 		tabindex="-1"
 		onclick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
 		onkeydown={(e) => { if (e.key === 'Escape') closeModal(); }}
 	>
-		<div class="bg-card border border-border rounded-2xl max-w-[820px] w-full max-h-[85vh] flex flex-col shadow-[0_4px_24px_rgba(26,29,35,0.08)] animate-[modalIn_0.25s_ease-out]">
+		<div class="bg-card border border-border rounded-2xl max-w-[820px] w-full max-h-[85vh] max-sm:max-h-[95vh] flex flex-col shadow-[0_4px_24px_rgba(26,29,35,0.08)] animate-[modalIn_0.25s_ease-out]">
 			<div class="flex items-center justify-between px-6 py-5 border-b border-border-light">
 				<div class="text-base font-bold">{modalTitle}</div>
 				<button
@@ -722,11 +722,11 @@
 					<svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
 				</button>
 			</div>
-			<div class="px-6 py-5 overflow-y-auto">
+			<div class="px-6 py-5 max-sm:px-3 max-sm:py-3 overflow-y-auto">
 				{#if modalProcs.length === 0}
 					<div class="text-center text-muted-foreground py-10">No running processes on this GPU.</div>
 				{:else}
-					<div class="border border-border-light rounded-[10px] overflow-hidden">
+					<div class="border border-border-light rounded-[10px] overflow-x-auto">
 						<table class="w-full text-xs border-collapse">
 							<thead>
 								<tr>
