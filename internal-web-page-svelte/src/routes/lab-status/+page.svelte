@@ -3,7 +3,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { RefreshCw } from 'lucide-svelte';
 	import { cn } from '$lib/utils';
-	import { untrack } from 'svelte';
+	import { untrack, tick } from 'svelte';
 
 	type PageId = 'overview' | 'gpu' | 'cpu' | 'disk' | 'processes' | 'alerts';
 	type Status = 'available' | 'inuse' | 'critical' | 'offline';
@@ -253,10 +253,12 @@
 	});
 
 	// ─── Modal ───
-	function openModal(label: string, procs: GpuProcess[]) {
+	async function openModal(label: string, procs: GpuProcess[]) {
 		modalTitle = label;
 		modalProcs = procs;
 		showModal = true;
+		await tick();
+		document.getElementById('gpu-modal-backdrop')?.focus();
 	}
 
 	function closeModal() {
@@ -362,7 +364,7 @@
 					{#if machine}
 						<!-- Metrics -->
 						{@const cpuPct = machine.cpu?.percent ?? 0}
-						{@const ramPct = machine.ram ? Math.round((machine.ram.used_mib / machine.ram.total_mib) * 100) : 0}
+						{@const ramPct = machine.ram && machine.ram.total_mib > 0 ? Math.round((machine.ram.used_mib / machine.ram.total_mib) * 100) : 0}
 						{@const worstDiskPct = machine.disk?.partitions?.length ? Math.max(...machine.disk.partitions.map((p) => p.percent)) : 0}
 						<div class="grid grid-cols-2 gap-2.5">
 							<div class="bg-background rounded-[10px] p-2.5 px-3">
@@ -424,7 +426,7 @@
 			<Badge class="bg-status-critical-bg text-status-critical border-status-critical/30">Critical</Badge>
 			<Badge class="bg-status-offline-bg text-status-offline-fg border-status-offline-fg/30">Offline</Badge>
 		</div>
-		<div class="bg-card border border-border rounded-2xl shadow-[var(--shadow)] overflow-hidden">
+		<div class="bg-card border border-border rounded-2xl shadow-[0_1px_3px_rgba(26,29,35,0.04),0_4px_12px_rgba(26,29,35,0.03)] overflow-hidden">
 			<div class="overflow-x-auto">
 				<table class="w-full text-[13px] border-collapse">
 					<thead>
@@ -502,7 +504,7 @@
 			<Badge class="bg-status-critical-bg text-status-critical border-status-critical/30">Critical</Badge>
 			<Badge class="bg-status-offline-bg text-status-offline-fg border-status-offline-fg/30">Offline</Badge>
 		</div>
-		<div class="bg-card border border-border rounded-2xl shadow-[var(--shadow)] overflow-hidden">
+		<div class="bg-card border border-border rounded-2xl shadow-[0_1px_3px_rgba(26,29,35,0.04),0_4px_12px_rgba(26,29,35,0.03)] overflow-hidden">
 			<div class="overflow-x-auto">
 				<table class="w-full text-[13px] border-collapse">
 					<thead>
@@ -565,7 +567,7 @@
 			<Badge class="bg-status-critical-bg text-status-critical border-status-critical/30">Critical</Badge>
 			<Badge class="bg-status-offline-bg text-status-offline-fg border-status-offline-fg/30">Offline</Badge>
 		</div>
-		<div class="bg-card border border-border rounded-2xl shadow-[var(--shadow)] overflow-hidden">
+		<div class="bg-card border border-border rounded-2xl shadow-[0_1px_3px_rgba(26,29,35,0.04),0_4px_12px_rgba(26,29,35,0.03)] overflow-hidden">
 			<div class="overflow-x-auto">
 				<table class="w-full text-[13px] border-collapse">
 					<thead>
@@ -624,7 +626,7 @@
 	<div class={activePage === 'processes' ? '' : 'hidden'}>
 		{#each sortedHostnames() as hostname}
 			{@const machine = getMachine(hostname)}
-			<div class="bg-card border border-border rounded-2xl shadow-[var(--shadow)] mb-4 overflow-hidden">
+			<div class="bg-card border border-border rounded-2xl shadow-[0_1px_3px_rgba(26,29,35,0.04),0_4px_12px_rgba(26,29,35,0.03)] mb-4 overflow-hidden">
 				<div class="flex items-center gap-2.5 px-5 py-4 border-b border-border-light">
 					<div class="text-[15px] font-bold">{hostname}</div>
 					{#if !machine}
@@ -680,7 +682,7 @@
 		{#if data}
 		{@const alerts = getAlerts()}
 		{#if alerts.length === 0}
-			<div class="bg-card border border-border rounded-2xl shadow-[var(--shadow)]">
+			<div class="bg-card border border-border rounded-2xl shadow-[0_1px_3px_rgba(26,29,35,0.04),0_4px_12px_rgba(26,29,35,0.03)]">
 				<div class="flex flex-col items-center justify-center py-20 px-5 text-center">
 					<div class="w-16 h-16 rounded-[20px] bg-orange-light flex items-center justify-center mb-5">
 						<svg class="size-7 text-orange" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -690,7 +692,7 @@
 				</div>
 			</div>
 		{:else}
-			<div class="bg-card border border-border rounded-2xl shadow-[var(--shadow)] overflow-hidden py-1">
+			<div class="bg-card border border-border rounded-2xl shadow-[0_1px_3px_rgba(26,29,35,0.04),0_4px_12px_rgba(26,29,35,0.03)] overflow-hidden py-1">
 				{#each alerts as alert, i}
 					<div class="flex items-start gap-3 px-5 py-4 {i < alerts.length - 1 ? 'border-b border-border-light' : ''}">
 						<div class="w-2.5 h-2.5 rounded-full mt-1.5 shrink-0" style="background: var(--status-{alert.level === 'red' ? 'critical' : 'inuse'})"></div>
@@ -715,6 +717,9 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 z-[100] bg-[rgba(26,29,35,0.4)] backdrop-blur-[6px] flex items-center justify-center p-5"
+		id="gpu-modal-backdrop"
+		role="dialog"
+		tabindex="-1"
 		onclick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
 		onkeydown={(e) => { if (e.key === 'Escape') closeModal(); }}
 	>
