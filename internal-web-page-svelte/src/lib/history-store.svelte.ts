@@ -21,6 +21,7 @@ export function getMachineHistory(hostname: string): HistoryPoint[] {
 }
 
 export function recordSnapshot(data: MachinesResponse) {
+	if (!data.machines) return;
 	const now = Date.now();
 	for (const [hostname, machine] of Object.entries(data.machines)) {
 		if (!history[hostname]) {

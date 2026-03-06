@@ -10,12 +10,12 @@
 		Sun,
 		Moon,
 		Menu,
-		X
+		X,
+		ChevronLeft
 	} from 'lucide-svelte';
 	import { cn } from '$lib/utils';
 	import { initTheme, toggleTheme, isDark } from '$lib/theme.svelte';
 	import { type PageId, getActivePage, setActivePage, getAlertCount, getSearchQuery, setSearchQuery, getSelectedMachine, goBackFromDetail } from '$lib/lab-state.svelte';
-	import { ChevronLeft } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 
 	let { children } = $props();
@@ -64,7 +64,7 @@
 </script>
 
 <svelte:head>
-	<title>{pageTitles[getActivePage()]} - MISL Lab Dashboard</title>
+	<title>{getPageTitle()} - MISL Lab Dashboard</title>
 </svelte:head>
 
 <div class="flex min-h-screen">

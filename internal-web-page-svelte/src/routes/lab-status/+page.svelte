@@ -952,7 +952,7 @@
 								<path d={sparklinePath(chart.data, 200, 48)} fill="none" stroke={chart.color} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.8" />
 							</svg>
 							<div class="flex justify-between text-[10px] text-muted-foreground mt-1">
-								<span>{Math.round(hist.length * 0.5)}m ago</span>
+								<span>{Math.round((hist.length - 1) * 0.5)}m ago</span>
 								<span>now</span>
 							</div>
 						</div>
