@@ -14,7 +14,8 @@
 	} from 'lucide-svelte';
 	import { cn } from '$lib/utils';
 	import { initTheme, toggleTheme, isDark } from '$lib/theme.svelte';
-	import { type PageId, getActivePage, setActivePage, getAlertCount } from '$lib/lab-state.svelte';
+	import { type PageId, getActivePage, setActivePage, getAlertCount, getSearchQuery, setSearchQuery, getSelectedMachine, goBackFromDetail } from '$lib/lab-state.svelte';
+	import { ChevronLeft } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 
 	let { children } = $props();
@@ -27,8 +28,17 @@
 		cpu: 'CPU & RAM',
 		disk: 'Disk',
 		processes: 'Processes',
-		alerts: 'Alerts'
+		alerts: 'Alerts',
+		'machine-detail': 'Machine Detail'
 	};
+
+	function getPageTitle(): string {
+		const page = getActivePage();
+		if (page === 'machine-detail') {
+			return getSelectedMachine() || 'Machine Detail';
+		}
+		return pageTitles[page];
+	}
 
 	const navItems: { id: PageId; label: string; section: 'monitor' | 'system' }[] = [
 		{ id: 'overview', label: 'Overview', section: 'monitor' },
@@ -270,10 +280,34 @@
 			>
 				<Menu class="size-5" />
 			</button>
-			<div class="text-[22px] max-md:text-lg font-extrabold tracking-tight flex-1">{pageTitles[getActivePage()]}</div>
+			{#if getActivePage() === 'machine-detail'}
+				<button
+					class="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+					onclick={goBackFromDetail}
+				>
+					<ChevronLeft class="size-4" />
+					Back
+				</button>
+			{/if}
+			<div class="text-[22px] max-md:text-lg font-extrabold tracking-tight flex-1">{getPageTitle()}</div>
 			<div class="flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-card text-sm text-muted-foreground min-w-[260px] max-md:hidden">
 				<svg class="size-4 opacity-40 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-				<input type="text" placeholder="Search machines, users, processes..." class="border-none bg-transparent outline-none font-sans text-sm text-foreground w-full placeholder:text-muted-foreground" />
+				<input
+					type="text"
+					placeholder="Search machines, users, processes..."
+					class="border-none bg-transparent outline-none font-sans text-sm text-foreground w-full placeholder:text-muted-foreground"
+					value={getSearchQuery()}
+					oninput={(e) => setSearchQuery(e.currentTarget.value)}
+				/>
+				{#if getSearchQuery()}
+					<button
+						class="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+						onclick={() => setSearchQuery('')}
+						aria-label="Clear search"
+					>
+						<X class="size-3.5" />
+					</button>
+				{/if}
 			</div>
 			<div class="size-9 rounded-full bg-gradient-to-br from-[#3b7dd8] to-[#2d9d5e] flex items-center justify-center text-white font-bold text-sm shrink-0">
 				T
