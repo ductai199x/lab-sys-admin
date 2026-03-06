@@ -9,3 +9,7 @@ system_reporter_install_dir: /opt/system_reporter
 system_reporter_venv_dir: /opt/system_reporter/venv
 system_reporter_redis_maxmemory: "64mb"
 system_reporter_redis_bind_address: "10.0.0.3"
+
+# Local (non-sudo) deployment paths
+system_reporter_local_install_dir: "{{ ansible_env.HOME }}/system_reporter"
+system_reporter_local_venv_dir: "{{ ansible_env.HOME }}/system_reporter/venv"

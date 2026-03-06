@@ -1,65 +1,155 @@
 ---
 # Deploy system_reporter agent to each machine
+# Checks for sudo access and falls back to a local (user-level) deployment
+# when sudo is not available.
 
-- name: Install system apt dependencies for system_reporter
-  become: true
-  ansible.builtin.apt:
-    name:
-      - python3
-      - python3-pip
-      - python3-venv
-    state: present
-  retries: 3
-  delay: 5
-  register: result
-  until: result is success
-
-- name: Create system_reporter install directory
-  become: true
-  ansible.builtin.file:
-    path: "{{ system_reporter_install_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-
-- name: Copy system_reporter Python package
-  become: true
-  ansible.builtin.copy:
-    src: system_reporter/
-    dest: "{{ system_reporter_install_dir }}/system_reporter/"
-    owner: root
-    group: root
-    mode: "0644"
-  notify: restart system_reporter
-
-- name: Create Python virtual environment
-  become: true
+- name: Check whether we have sudo access
   ansible.builtin.command:
-    cmd: "python3 -m venv {{ system_reporter_venv_dir }}"
-    creates: "{{ system_reporter_venv_dir }}/bin/python"
+    cmd: sudo -n true
+  register: sudo_check
+  changed_when: false
+  failed_when: false
 
-- name: Install Python dependencies in venv
-  become: true
-  ansible.builtin.pip:
-    requirements: "{{ system_reporter_install_dir }}/system_reporter/requirements.txt"
-    virtualenv: "{{ system_reporter_venv_dir }}"
-  notify: restart system_reporter
+- name: Set has_sudo fact
+  ansible.builtin.set_fact:
+    has_sudo: "{{ sudo_check.rc == 0 }}"
 
-- name: Deploy systemd unit file
-  become: true
-  ansible.builtin.template:
-    src: system_reporter.service.j2
-    dest: /etc/systemd/system/system_reporter.service
-    owner: root
-    group: root
-    mode: "0644"
-  notify: restart system_reporter
+- name: Show deployment mode
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'Sudo available — deploying system-wide to ' ~ system_reporter_install_dir
+         if has_sudo | bool
+         else 'No sudo access — deploying locally to ' ~ system_reporter_local_install_dir }}
 
-- name: Enable and start system_reporter service
-  become: true
-  ansible.builtin.systemd:
-    name: system_reporter
-    enabled: true
-    state: started
-    daemon_reload: true
+# ──────────────────────────────────────────────
+#  Path A: system-wide deployment (sudo)
+# ──────────────────────────────────────────────
+- name: Deploy system-wide (with sudo)
+  when: has_sudo | bool
+  block:
+    - name: Install system apt dependencies for system_reporter
+      become: true
+      ansible.builtin.apt:
+        name:
+          - python3
+          - python3-pip
+          - python3-venv
+        state: present
+      retries: 3
+      delay: 5
+      register: result
+      until: result is success
+
+    - name: Create system_reporter install directory
+      become: true
+      ansible.builtin.file:
+        path: "{{ system_reporter_install_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Copy system_reporter Python package
+      become: true
+      ansible.builtin.copy:
+        src: system_reporter/
+        dest: "{{ system_reporter_install_dir }}/system_reporter/"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: restart system_reporter
+
+    - name: Create Python virtual environment
+      become: true
+      ansible.builtin.command:
+        cmd: "python3 -m venv {{ system_reporter_venv_dir }}"
+        creates: "{{ system_reporter_venv_dir }}/bin/python"
+
+    - name: Install Python dependencies in venv
+      become: true
+      ansible.builtin.pip:
+        requirements: "{{ system_reporter_install_dir }}/system_reporter/requirements.txt"
+        virtualenv: "{{ system_reporter_venv_dir }}"
+      notify: restart system_reporter
+
+    - name: Deploy systemd unit file
+      become: true
+      ansible.builtin.template:
+        src: system_reporter.service.j2
+        dest: /etc/systemd/system/system_reporter.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify: restart system_reporter
+
+    - name: Enable and start system_reporter service
+      become: true
+      ansible.builtin.systemd:
+        name: system_reporter
+        enabled: true
+        state: started
+        daemon_reload: true
+
+# ──────────────────────────────────────────────
+#  Path B: local deployment (no sudo)
+# ──────────────────────────────────────────────
+- name: Deploy locally (without sudo)
+  when: not (has_sudo | bool)
+  block:
+    - name: Verify python3 is available
+      ansible.builtin.command:
+        cmd: python3 --version
+      register: python3_check
+      changed_when: false
+      failed_when: python3_check.rc != 0
+
+    - name: Create local install directory
+      ansible.builtin.file:
+        path: "{{ system_reporter_local_install_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Copy system_reporter Python package (local)
+      ansible.builtin.copy:
+        src: system_reporter/
+        dest: "{{ system_reporter_local_install_dir }}/system_reporter/"
+        mode: "0644"
+      notify: restart system_reporter (user)
+
+    - name: Create Python virtual environment (local)
+      ansible.builtin.command:
+        cmd: "python3 -m venv {{ system_reporter_local_venv_dir }}"
+        creates: "{{ system_reporter_local_venv_dir }}/bin/python"
+
+    - name: Install Python dependencies in local venv
+      ansible.builtin.pip:
+        requirements: "{{ system_reporter_local_install_dir }}/system_reporter/requirements.txt"
+        virtualenv: "{{ system_reporter_local_venv_dir }}"
+      notify: restart system_reporter (user)
+
+    - name: Create user systemd config directory
+      ansible.builtin.file:
+        path: "{{ ansible_env.HOME }}/.config/systemd/user"
+        state: directory
+        mode: "0755"
+
+    - name: Deploy user-level systemd unit file
+      ansible.builtin.template:
+        src: system_reporter_user.service.j2
+        dest: "{{ ansible_env.HOME }}/.config/systemd/user/system_reporter.service"
+        mode: "0644"
+      notify: restart system_reporter (user)
+
+    - name: Enable lingering so user services run without an active session
+      ansible.builtin.command:
+        cmd: "loginctl enable-linger {{ ansible_user_id }}"
+      changed_when: true
+      failed_when: false
+
+    - name: Enable and start system_reporter user service
+      ansible.builtin.systemd:
+        name: system_reporter
+        enabled: true
+        state: started
+        daemon_reload: true
+        scope: user
