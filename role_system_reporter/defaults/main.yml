@@ -13,3 +13,8 @@ system_reporter_redis_bind_address: "10.0.0.3"
 # Local (non-sudo) deployment paths
 system_reporter_local_install_dir: "{{ ansible_env.HOME }}/system_reporter"
 system_reporter_local_venv_dir: "{{ ansible_env.HOME }}/system_reporter/venv"
+
+# Ngrok tunnel for exposing Redis to external machines
+system_reporter_ngrok_enabled: false
+system_reporter_ngrok_authtoken: ""
+system_reporter_ngrok_endpoint: ""

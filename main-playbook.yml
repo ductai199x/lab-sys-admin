@@ -12,17 +12,30 @@
         name: role_apt
       when: is_update_upgrade | bool
 
-    - name: Grab current PATH environment variable
+    - name: Check if zsh is available
+      ansible.builtin.stat:
+        path: /usr/bin/zsh
+      register: zsh_check
+
+    - name: Grab current PATH environment variable (zsh)
       ansible.builtin.shell:
         cmd: source ~/.zshrc && echo $PATH
       args:
         executable: /usr/bin/zsh
-      register: env_path
+      register: env_path_zsh
       changed_when: false
+      when: zsh_check.stat.exists
+
+    - name: Grab current PATH environment variable (fallback)
+      ansible.builtin.shell:
+        cmd: echo $PATH
+      register: env_path_fallback
+      changed_when: false
+      when: not zsh_check.stat.exists
 
     - name: Set fact for env_path
       ansible.builtin.set_fact:
-        env_path: "{{ env_path.stdout }}"
+        env_path: "{{ (env_path_zsh.stdout if zsh_check.stat.exists else env_path_fallback.stdout) }}"
         cacheable: "yes"
 
     - name: Include the role_reboot

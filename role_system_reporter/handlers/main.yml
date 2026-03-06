@@ -19,6 +19,13 @@
     name: redis-server
     state: restarted
 
+- name: restart ngrok-redis
+  become: true
+  ansible.builtin.systemd:
+    name: ngrok-redis
+    state: restarted
+    daemon_reload: true
+
 - name: restart internal_web
   become: true
   ansible.builtin.systemd:

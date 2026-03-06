@@ -1,0 +1,8 @@
+version: 3
+agent:
+  authtoken: {{ system_reporter_ngrok_authtoken }}
+tunnels:
+  redis:
+    proto: tcp
+    addr: 127.0.0.1:{{ system_reporter_redis_port }}
+    remote_addr: {{ system_reporter_ngrok_endpoint }}

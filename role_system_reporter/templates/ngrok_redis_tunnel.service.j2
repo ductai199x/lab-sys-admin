@@ -1,0 +1,17 @@
+[Unit]
+Description=Ngrok TCP tunnel for Redis (system_reporter)
+After=network-online.target redis-server.service
+Wants=network-online.target
+Requires=redis-server.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/ngrok start redis --config /etc/ngrok/ngrok.yml
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ngrok-redis
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,68 @@
+---
+# Deploy ngrok TCP tunnel to expose Redis for external machines
+# Only runs on the internal web host when ngrok is enabled.
+
+- name: Check if ngrok is installed
+  ansible.builtin.command:
+    cmd: ngrok version
+  register: ngrok_version_check
+  changed_when: false
+  failed_when: false
+
+- name: Install ngrok if not present
+  when: ngrok_version_check.rc != 0
+  become: true
+  block:
+    - name: Download ngrok signing key
+      ansible.builtin.shell:
+        cmd: curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc | tee /etc/apt/trusted.gpg.d/ngrok.asc > /dev/null
+        creates: /etc/apt/trusted.gpg.d/ngrok.asc
+
+    - name: Add ngrok apt repository
+      ansible.builtin.apt_repository:
+        repo: "deb https://ngrok-agent.s3.amazonaws.com buster main"
+        filename: ngrok
+        state: present
+
+    - name: Install ngrok
+      ansible.builtin.apt:
+        name: ngrok
+        state: present
+        update_cache: true
+
+- name: Create ngrok config directory
+  become: true
+  ansible.builtin.file:
+    path: /etc/ngrok
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Deploy ngrok configuration
+  become: true
+  ansible.builtin.template:
+    src: ngrok.yml.j2
+    dest: /etc/ngrok/ngrok.yml
+    owner: root
+    group: root
+    mode: "0600"
+  notify: restart ngrok-redis
+
+- name: Deploy ngrok systemd service
+  become: true
+  ansible.builtin.template:
+    src: ngrok_redis_tunnel.service.j2
+    dest: /etc/systemd/system/ngrok-redis.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart ngrok-redis
+
+- name: Enable and start ngrok tunnel service
+  become: true
+  ansible.builtin.systemd:
+    name: ngrok-redis
+    enabled: true
+    state: started
+    daemon_reload: true
