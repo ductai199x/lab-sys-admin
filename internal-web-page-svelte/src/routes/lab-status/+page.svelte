@@ -126,8 +126,13 @@
 	}
 
 	// ─── Status Classifiers ───
-	function gpuStatusClass(usedMib: number): Status {
-		return usedMib > 500 ? 'inuse' : 'available';
+	function gpuBusy(usedMib: number, totalMib: number): boolean {
+		if (totalMib <= 0) return false;
+		return (usedMib / totalMib) > 0.01;
+	}
+
+	function gpuStatusClass(usedMib: number, totalMib: number): Status {
+		return gpuBusy(usedMib, totalMib) ? 'inuse' : 'available';
 	}
 
 	function cpuStatusClass(percent: number): Status {
@@ -152,7 +157,7 @@
 
 	function worstGpuStatus(machine: MachineData): Status {
 		if (!machine.gpu?.available || !machine.gpu.gpus?.length) return 'available';
-		return machine.gpu.gpus.some((g) => g.memory.used_mib > 500) ? 'inuse' : 'available';
+		return machine.gpu.gpus.some((g) => gpuBusy(g.memory.used_mib, g.memory.total_mib)) ? 'inuse' : 'available';
 	}
 
 	function worstDiskStatus(machine: MachineData): Status {
@@ -222,7 +227,7 @@
 
 	function getFreeGpus(): number {
 		return getOnlineMachines().reduce(
-			(s, n) => s + (getMachine(n)?.gpu?.gpus?.filter((g) => g.memory.used_mib < 500).length ?? 0),
+			(s, n) => s + (getMachine(n)?.gpu?.gpus?.filter((g) => !gpuBusy(g.memory.used_mib, g.memory.total_mib)).length ?? 0),
 			0
 		);
 	}
@@ -571,7 +576,7 @@
 						{#if machine.gpu?.available && machine.gpu.gpus?.length}
 							<div class="mt-3">
 								{#each machine.gpu.gpus as gpu}
-									{@const busy = gpu.memory.used_mib > 500}
+									{@const busy = gpuBusy(gpu.memory.used_mib, gpu.memory.total_mib)}
 									<div class="flex items-center gap-2 py-1.5 border-t border-border-light first:border-t-0 text-xs">
 										<div class="flex-1 font-medium text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">{gpu.name}</div>
 										<div class="font-mono text-[11px] font-medium">{safeLocale(gpu.memory.used_mib)}/{safeLocale(gpu.memory.total_mib)}</div>
@@ -648,7 +653,7 @@
 						{/each}
 						<!-- GPU rows (sortable) -->
 						{#each getGpuRows() as row}
-							{@const status = gpuStatusClass(row.gpu.memory.used_mib)}
+							{@const status = gpuStatusClass(row.gpu.memory.used_mib, row.gpu.memory.total_mib)}
 							{@const hostBg = statusRowBg(worstGpuStatus(row.machine))}
 							<tr
 								class={cn(statusRowBg(status), 'cursor-pointer hover:brightness-[0.97] border-b border-border-light last:border-b-0')}
@@ -998,7 +1003,7 @@
 					<div class="bg-card border border-border rounded-xl p-4">
 						<div class="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-1">GPUs</div>
 						<div class="text-2xl font-extrabold">{machine.gpu.gpus.length}</div>
-						<div class="text-[11px] text-muted-foreground mt-1.5">{machine.gpu.gpus.filter(g => g.memory.used_mib < 500).length} free, {machine.gpu.gpus.filter(g => g.memory.used_mib >= 500).length} in use</div>
+						<div class="text-[11px] text-muted-foreground mt-1.5">{machine.gpu.gpus.filter(g => !gpuBusy(g.memory.used_mib, g.memory.total_mib)).length} free, {machine.gpu.gpus.filter(g => gpuBusy(g.memory.used_mib, g.memory.total_mib)).length} in use</div>
 						<div class="text-[11px] text-muted-foreground">Driver: {machine.gpu.driver_version ?? 'N/A'}</div>
 					</div>
 				{/if}
@@ -1010,15 +1015,15 @@
 					<h3 class="text-[13px] font-bold uppercase tracking-wider text-muted-foreground mb-3">GPU Details</h3>
 					<div class="grid gap-3">
 						{#each machine.gpu.gpus as gpu, gpuIdx}
-							{@const gpuBusy = gpu.memory.used_mib > 500}
+							{@const isGpuBusy = gpuBusy(gpu.memory.used_mib, gpu.memory.total_mib)}
 							<div class="bg-card border border-border rounded-xl p-4">
 								<div class="flex items-center gap-2 mb-3">
 									<span class="font-bold text-sm">GPU {gpuIdx}: {gpu.name}</span>
 									<span class={cn(
 										'inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ml-auto',
-										gpuBusy ? 'bg-status-inuse-bg text-status-inuse' : 'bg-status-available-bg text-status-available'
+										isGpuBusy ? 'bg-status-inuse-bg text-status-inuse' : 'bg-status-available-bg text-status-available'
 									)}>
-										{gpuBusy ? 'In Use' : 'Free'}
+										{isGpuBusy ? 'In Use' : 'Free'}
 									</span>
 								</div>
 								<div class="grid grid-cols-4 gap-3 text-xs max-sm:grid-cols-2">
